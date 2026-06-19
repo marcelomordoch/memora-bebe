@@ -1,0 +1,13 @@
+{
+  "name": "Memora Bebê",
+  "short_name": "Memora",
+  "description": "A memória emocional da infância.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6B53AE",
+  "icons": [
+    { "src": "/logo-mark.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/logo-mark.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
