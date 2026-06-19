@@ -6,7 +6,9 @@ import StatusBar from '@/components/ui/StatusBar';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import Button from '@/components/ui/Button';
 import AppShell from '@/components/layout/AppShell';
-import { MEMORY_EMOJIS } from '@/lib/utils';
+import { MEMORY_EMOJIS, MEMORY_COLORS } from '@/lib/utils';
+import { useApp } from '@/contexts/AppContext';
+import { createMemory } from '@/lib/supabase/queries';
 
 type LifeStage = 'gestacao' | '0-1' | '1-3' | 'escola';
 
@@ -21,52 +23,61 @@ function HistoriaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const promptParam = searchParams.get('prompt') ?? '';
+  const { user, baby } = useApp();
 
   const [stage, setStage] = useState<LifeStage>('gestacao');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const emojis: string[] = MEMORY_EMOJIS[stage] ?? [];
 
   const handleSave = async () => {
+    if (!title.trim() || !body.trim()) { setError('Preencha o título e o conteúdo.'); return }
+    if (!baby?.id || !user?.id) { setError('Sessão inválida. Faça login novamente.'); return }
+    setError('');
     setLoading(true);
-    await new Promise((res) => setTimeout(res, 1000));
-    setLoading(false);
-    router.push('/memorias');
+    try {
+      await createMemory({
+        baby_id: baby.id,
+        user_id: user.id,
+        type: 'historia',
+        title: title.trim(),
+        body: body.trim(),
+        life_stage: stage,
+        emoji: selectedEmoji ?? undefined,
+        bg_color: MEMORY_COLORS[stage],
+        week: baby.week,
+      });
+      router.push('/memorias');
+    } catch (err) {
+      console.error(err);
+      setError('Erro ao salvar. Tente novamente.');
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ background: 'var(--surface-page)', minHeight: '100vh' }}>
+    <div style={{ background: '#F4F3F7', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
       <StatusBar />
       <ScreenHeader title="Nova História" onBack={() => router.back()} />
 
       <div style={{ padding: '0 16px 40px' }}>
         {/* Stage chips */}
-        <div style={{
-          display: 'flex',
-          gap: 8,
-          marginBottom: 22,
-          overflowX: 'auto',
-          paddingBottom: 4,
-        }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 22, overflowX: 'auto', paddingBottom: 4 }}>
           {STAGE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => {
-                setStage(opt.value);
-                setSelectedEmoji(null);
-              }}
+              onClick={() => { setStage(opt.value); setSelectedEmoji(null); }}
               style={{
                 padding: '7px 16px',
                 borderRadius: 30,
-                border: stage === opt.value
-                  ? '2px solid var(--accent)'
-                  : '2px solid var(--border-subtle)',
-                background: stage === opt.value ? 'var(--accent)' : 'var(--surface-card)',
-                color: stage === opt.value ? '#fff' : 'var(--text-muted)',
-                fontFamily: 'var(--font-body)',
+                border: stage === opt.value ? '2px solid #6B53AE' : '2px solid #E7E5F0',
+                background: stage === opt.value ? '#6B53AE' : '#fff',
+                color: stage === opt.value ? '#fff' : '#8B89B0',
+                fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
                 fontSize: 13,
                 cursor: 'pointer',
@@ -90,11 +101,11 @@ function HistoriaContent() {
             boxSizing: 'border-box',
             background: 'transparent',
             border: 'none',
-            borderBottom: '2px solid var(--border-subtle)',
-            fontFamily: 'var(--font-display)',
+            borderBottom: '2px solid #E7E5F0',
+            fontFamily: 'Poppins, sans-serif',
             fontWeight: 700,
             fontSize: 22,
-            color: 'var(--text-strong)',
+            color: '#2E2C4A',
             padding: '0 0 12px',
             marginBottom: 18,
             outline: 'none',
@@ -102,21 +113,8 @@ function HistoriaContent() {
         />
 
         {/* Writing prompt box */}
-        <div style={{
-          background: 'var(--violet-50)',
-          borderRadius: 14,
-          padding: '12px 14px',
-          marginBottom: 16,
-          border: '1px solid var(--violet-100)',
-        }}>
-          <p style={{
-            fontSize: 14,
-            color: 'var(--text-accent)',
-            fontFamily: 'var(--font-body)',
-            fontStyle: 'italic',
-            margin: 0,
-            lineHeight: 1.5,
-          }}>
+        <div style={{ background: '#F3EFFA', borderRadius: 14, padding: '12px 14px', marginBottom: 16, border: '1px solid #E7E1F4' }}>
+          <p style={{ fontSize: 14, color: '#6B53AE', fontFamily: 'Inter, sans-serif', fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>
             {promptParam || 'Como foi esse momento especial?'}
           </p>
         </div>
@@ -130,13 +128,13 @@ function HistoriaContent() {
             width: '100%',
             boxSizing: 'border-box',
             minHeight: 200,
-            background: 'var(--surface-card)',
-            border: '2px solid var(--border-subtle)',
+            background: '#fff',
+            border: '2px solid #E7E5F0',
             borderRadius: 14,
             padding: '14px 16px',
-            fontFamily: 'var(--font-body)',
+            fontFamily: 'Inter, sans-serif',
             fontSize: 15,
-            color: 'var(--text-body)',
+            color: '#2E2C4A',
             lineHeight: 1.6,
             resize: 'none',
             outline: 'none',
@@ -147,21 +145,10 @@ function HistoriaContent() {
         {/* Emoji picker */}
         {emojis.length > 0 && (
           <div style={{ marginBottom: 28 }}>
-            <p style={{
-              fontSize: 13,
-              color: 'var(--text-muted)',
-              fontFamily: 'var(--font-body)',
-              fontWeight: 500,
-              margin: '0 0 10px',
-            }}>
+            <p style={{ fontSize: 13, color: '#8B89B0', fontFamily: 'Inter, sans-serif', fontWeight: 500, margin: '0 0 10px' }}>
               Escolha um emoji
             </p>
-            <div style={{
-              display: 'flex',
-              gap: 10,
-              overflowX: 'auto',
-              paddingBottom: 4,
-            }}>
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
               {emojis.map((emoji) => (
                 <button
                   key={emoji}
@@ -170,10 +157,8 @@ function HistoriaContent() {
                     width: 48,
                     height: 48,
                     borderRadius: 14,
-                    border: selectedEmoji === emoji
-                      ? '2.5px solid var(--accent)'
-                      : '2px solid var(--border-subtle)',
-                    background: selectedEmoji === emoji ? 'var(--violet-50)' : 'var(--surface-card)',
+                    border: selectedEmoji === emoji ? '2.5px solid #6B53AE' : '2px solid #E7E5F0',
+                    background: selectedEmoji === emoji ? '#F3EFFA' : '#fff',
                     fontSize: 24,
                     cursor: 'pointer',
                     display: 'flex',
@@ -181,7 +166,7 @@ function HistoriaContent() {
                     justifyContent: 'center',
                     flexShrink: 0,
                     transition: 'all 0.15s',
-                    boxShadow: selectedEmoji === emoji ? 'var(--shadow-accent)' : 'none',
+                    boxShadow: selectedEmoji === emoji ? '0 2px 8px rgba(107,83,174,0.25)' : 'none',
                   }}
                 >
                   {emoji}
@@ -191,13 +176,11 @@ function HistoriaContent() {
           </div>
         )}
 
+        {/* Error */}
+        {error && <p style={{ color: '#EF4444', fontSize: 13, margin: '0 0 12px' }}>{error}</p>}
+
         {/* Save button */}
-        <Button
-          variant="primary"
-          fullWidth
-          loading={loading}
-          onClick={handleSave}
-        >
+        <Button variant="primary" fullWidth loading={loading} onClick={handleSave}>
           Salvar memória
         </Button>
       </div>
@@ -208,7 +191,7 @@ function HistoriaContent() {
 export default function HistoriaPage() {
   return (
     <AppShell>
-      <Suspense fallback={<div style={{ padding: 32, textAlign: 'center' }}>Carregando...</div>}>
+      <Suspense fallback={<div style={{ padding: 32, textAlign: 'center', fontFamily: 'Inter, sans-serif', color: '#8B89B0' }}>Carregando...</div>}>
         <HistoriaContent />
       </Suspense>
     </AppShell>

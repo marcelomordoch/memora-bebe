@@ -1,27 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import StatusBar from '@/components/ui/StatusBar';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import AppShell from '@/components/layout/AppShell';
+import { useApp } from '@/contexts/AppContext';
+import { createClient } from '@/lib/supabase/client';
+
+const PARTNERS = [
+  { name: 'Natura',    emoji: '🌿', bg: '#D4EDDA' },
+  { name: 'Riachuelo', emoji: '👕', bg: '#D0E4F5' },
+  { name: 'Renner',    emoji: '🛍', bg: '#FADBD8' },
+  { name: 'Amazon',    emoji: '📦', bg: '#FDEBD0' },
+];
 
 export default function LojaPage() {
-  const partners = [
-    { label: 'NAT', name: 'Natura', emoji: '🌿', bg: '#D4EDDA', color: '#2D6A4F' },
-    { label: 'RCH', name: 'Riachuelo', emoji: '👕', bg: '#D0E4F5', color: '#1A5276' },
-    { label: 'RNR', name: 'Renner', emoji: '🛍', bg: '#FADBD8', color: '#922B21' },
-    { label: 'AMZ', name: 'Amazon', emoji: '📦', bg: '#FDEBD0', color: '#CA6F1E' },
-  ];
+  const { user } = useApp();
+  const [credits, setCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setCredits(data.credits ?? 0);
+      });
+  }, [user]);
+
+  const formatBalance = (n: number) =>
+    `R$ ${n.toFixed(2).replace('.', ',')}`;
 
   return (
     <AppShell>
-      <div style={{ background: 'var(--surface-page)', minHeight: '100vh' }}>
+      <div style={{ background: '#F4F3F7', minHeight: '100vh' }}>
         <StatusBar />
         <ScreenHeader title="Loja" />
 
         <div style={{ padding: '0 16px 32px' }}>
-          {/* Balance card */}
+
+          {/* ── Balance card ── */}
           <div style={{
             background: 'var(--surface-card)',
             borderRadius: 24,
@@ -29,25 +51,25 @@ export default function LojaPage() {
             padding: 20,
             marginBottom: 24,
           }}>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 4px', fontFamily: 'var(--font-body)' }}>
+            <p style={{ fontSize: 13, color: '#8B89B0', margin: '0 0 4px', fontFamily: 'Inter,sans-serif' }}>
               Seu saldo
             </p>
             <p style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: 'Poppins,sans-serif',
               fontWeight: 800,
               fontSize: 34,
-              color: 'var(--text-strong)',
+              color: '#2E2C4A',
               margin: '0 0 10px',
             }}>
-              R$ 0,00
+              {credits === null ? '—' : formatBalance(credits)}
             </p>
             <Link
               href="/perfil/loja/gift-cards/resgatar"
               style={{
                 fontSize: 13,
-                color: 'var(--text-accent)',
+                color: '#6B53AE',
                 textDecoration: 'none',
-                fontFamily: 'var(--font-body)',
+                fontFamily: 'Inter,sans-serif',
                 fontWeight: 500,
               }}
             >
@@ -55,23 +77,18 @@ export default function LojaPage() {
             </Link>
           </div>
 
-          {/* Parceiros section */}
+          {/* ── Parceiros ── */}
           <h2 style={{
-            fontFamily: 'var(--font-display)',
+            fontFamily: 'Poppins,sans-serif',
             fontWeight: 700,
             fontSize: 17,
-            color: 'var(--text-strong)',
+            color: '#2E2C4A',
             margin: '0 0 12px',
           }}>
             Parceiros
           </h2>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 12,
-            marginBottom: 24,
-          }}>
-            {partners.map((p) => (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+            {PARTNERS.map((p) => (
               <div
                 key={p.name}
                 style={{
@@ -83,57 +100,43 @@ export default function LojaPage() {
                   alignItems: 'center',
                   gap: 12,
                   cursor: 'pointer',
+                  opacity: 0.85,
                 }}
+                title="Em breve"
               >
                 <div style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 8,
+                  width: 38, height: 38, borderRadius: 8,
                   background: p.bg,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 20,
-                  flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20, flexShrink: 0,
                 }}>
                   {p.emoji}
                 </div>
-                <span style={{
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  color: 'var(--text-strong)',
-                }}>
-                  {p.name}
-                </span>
+                <div>
+                  <span style={{ fontFamily: 'Inter,sans-serif', fontWeight: 600, fontSize: 14, color: '#2E2C4A', display: 'block' }}>
+                    {p.name}
+                  </span>
+                  <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#8B89B0' }}>
+                    Em breve
+                  </span>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* CTA Banner */}
+          {/* ── CTA Gift Cards ── */}
           <Link href="/perfil/loja/gift-cards" style={{ textDecoration: 'none' }}>
             <div style={{
-              background: 'var(--gradient-brand)',
+              background: 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)',
               borderRadius: 18,
               padding: 20,
               cursor: 'pointer',
             }}>
-              <p style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 700,
-                fontSize: 22,
-                color: '#fff',
-                margin: '0 0 6px',
-              }}>
+              <p style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 20, color: '#fff', margin: '0 0 6px' }}>
                 Ofertas exclusivas para mamães! 🎁
               </p>
-              <p style={{
-                fontSize: 14,
-                color: 'rgba(255,255,255,0.8)',
-                margin: 0,
-                fontFamily: 'var(--font-body)',
-              }}>
-                Ver todas as ofertas
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', margin: 0, fontFamily: 'Inter,sans-serif' }}>
+                Presenteie quem você ama com um gift card
               </p>
             </div>
           </Link>

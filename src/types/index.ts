@@ -44,9 +44,11 @@ export interface FamilyMember {
   baby_id: string
   user_id: string
   name: string
-  email: string
+  email?: string
+  invited_email?: string
   status: 'pending' | 'accepted'
   role: 'parent' | 'grandparent' | 'other'
+  invite_token?: string
   created_at: string
 }
 

@@ -69,7 +69,7 @@ function FeatureRow({ label, included }: Feature) {
 
 export default function PlanosPage() {
   const router = useRouter();
-  const { plan } = useApp();
+  const { plan, user } = useApp();
   const [billing, setBilling] = useState<Billing>('monthly');
 
   const premiumPrice = billing === 'monthly' ? 'R$ 29,90/mês' : 'R$ 249,90/ano';
@@ -280,7 +280,10 @@ export default function PlanosPage() {
                 <Button
                   variant="primary"
                   fullWidth
-                  onClick={() => router.push(`/pagamento?type=upgrade&plan=premium&billing=${billing}`)}
+                  onClick={() => {
+                    const uid = user?.id ?? ''
+                    router.push(`/pagamento?type=upgrade&plan=premium&billing=${billing}&uid=${uid}`)
+                  }}
                   disabled={plan === 'premium'}
                 >
                   {plan === 'premium' ? 'Plano ativo' : 'Assinar Premium'}

@@ -7,20 +7,36 @@ import Button from '@/components/ui/Button'
 import StatusBar from '@/components/ui/StatusBar'
 import ScreenHeader from '@/components/ui/ScreenHeader'
 import Icon from '@/components/ui/Icon'
+import { resetPassword } from '@/lib/supabase/queries'
 
 export default function EsqueciSenhaPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email) return
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1000))
-    setSent(true)
-    setLoading(false)
+    setError('')
+
+    try {
+      await resetPassword(email)
+      setSent(true)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('User not found') || msg.includes('user_not_found')) {
+        setError('Nenhuma conta encontrada com esse e-mail.')
+      } else if (msg.includes('Too many requests')) {
+        setError('Muitas tentativas. Aguarde alguns minutos.')
+      } else {
+        setError('Ocorreu um erro. Tente novamente.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -62,6 +78,13 @@ export default function EsqueciSenhaPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
               />
+
+              {error && (
+                <p style={{ fontSize: 13, color: 'var(--danger)', fontFamily: 'var(--font-body)', textAlign: 'center' }}>
+                  {error}
+                </p>
+              )}
+
               <Button type="submit" fullWidth loading={loading} disabled={!email}>
                 Enviar link de redefinição
               </Button>

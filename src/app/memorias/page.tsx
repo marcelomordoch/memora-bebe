@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
-import { MOCK_MEMORIES } from '@/lib/mock-data'
+import { useApp } from '@/contexts/AppContext'
+import { getMemories, toggleLike } from '@/lib/supabase/queries'
 import { formatDate, formatShortDate } from '@/lib/utils'
 import type { Memory } from '@/types'
 
@@ -19,16 +20,17 @@ const FILTERS = [
 
 // ─── ImageViewer overlay ─────────────────────────────────────────────────────
 
-function ImageViewer({ memory, onClose }: { memory: Memory; onClose: () => void }) {
-  const [liked, setLiked] = useState(memory.liked_by_me)
-  const [count, setCount] = useState(memory.likes_count)
-
-  function toggleLike() {
-    setLiked(prev => {
-      setCount(c => prev ? c - 1 : c + 1)
-      return !prev
-    })
-  }
+function ImageViewer({
+  memory,
+  onClose,
+  onToggleLike,
+}: {
+  memory: Memory
+  onClose: () => void
+  onToggleLike: (id: string) => void
+}) {
+  const liked = memory.liked_by_me
+  const count = memory.likes_count
 
   return (
     <div
@@ -46,7 +48,7 @@ function ImageViewer({ memory, onClose }: { memory: Memory; onClose: () => void 
       <div
         style={{
           height: '56%',
-          background: memory.bg_color,
+          background: memory.bg_color || 'var(--gradient-brand)',
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
@@ -55,7 +57,7 @@ function ImageViewer({ memory, onClose }: { memory: Memory; onClose: () => void 
         }}
         onClick={e => e.stopPropagation()}
       >
-        <span style={{ fontSize: 88 }}>{memory.emoji}</span>
+        <span style={{ fontSize: 88 }}>{memory.emoji || '💜'}</span>
 
         {/* Close button */}
         <button
@@ -132,7 +134,7 @@ function ImageViewer({ memory, onClose }: { memory: Memory; onClose: () => void 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
           <button
-            onClick={toggleLike}
+            onClick={() => onToggleLike(memory.id)}
             style={{
               flex: 1,
               display: 'flex',
@@ -188,16 +190,21 @@ function ImageViewer({ memory, onClose }: { memory: Memory; onClose: () => void 
 
 // ─── Memory card ─────────────────────────────────────────────────────────────
 
-function MemoryCard({ memory, onOpen }: { memory: Memory; onOpen: () => void }) {
-  const [liked, setLiked] = useState(memory.liked_by_me)
-  const [count, setCount] = useState(memory.likes_count)
+function MemoryCard({
+  memory,
+  onOpen,
+  onToggleLike,
+}: {
+  memory: Memory
+  onOpen: () => void
+  onToggleLike: (id: string) => void
+}) {
+  const liked = memory.liked_by_me
+  const count = memory.likes_count
 
-  function toggleLike(e: React.MouseEvent) {
+  function handleLike(e: React.MouseEvent) {
     e.stopPropagation()
-    setLiked(prev => {
-      setCount(c => prev ? c - 1 : c + 1)
-      return !prev
-    })
+    onToggleLike(memory.id)
   }
 
   return (
@@ -218,20 +225,20 @@ function MemoryCard({ memory, onOpen }: { memory: Memory; onOpen: () => void }) 
         style={{
           width: 100,
           flexShrink: 0,
-          background: memory.bg_color,
+          background: memory.bg_color || 'var(--gradient-brand)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <span style={{ fontSize: 40 }}>{memory.emoji}</span>
+        <span style={{ fontSize: 40 }}>{memory.emoji || '💜'}</span>
       </div>
 
       {/* Right – content */}
       <div style={{ flex: 1, padding: 14, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, position: 'relative' }}>
         {/* Heart button */}
         <button
-          onClick={toggleLike}
+          onClick={handleLike}
           style={{
             position: 'absolute',
             top: 12,
@@ -306,15 +313,9 @@ function MemoryCard({ memory, onOpen }: { memory: Memory; onOpen: () => void }) 
         >
           <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Icon name="heart" size={12} color="var(--rose-500)" strokeWidth={0} />
-            {count} curtidas
+            {count} curtida{count !== 1 ? 's' : ''}
           </span>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--text-accent)',
-            }}
-          >
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-accent)' }}>
             Ver memória
           </span>
         </div>
@@ -326,12 +327,71 @@ function MemoryCard({ memory, onOpen }: { memory: Memory; onOpen: () => void }) 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function MemoriasPage() {
+  const { baby, user } = useApp()
   const [activeFilter, setActiveFilter] = useState('all')
+  const [allMemories, setAllMemories] = useState<Memory[]>([])
+  const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<Memory | null>(null)
 
+  // Fetch all memories once when baby loads
+  const fetchMemories = useCallback(async () => {
+    if (!baby?.id) return
+    setLoading(true)
+    try {
+      const mems = await getMemories(baby.id)
+      setAllMemories(mems)
+    } finally {
+      setLoading(false)
+    }
+  }, [baby?.id])
+
+  useEffect(() => {
+    fetchMemories()
+  }, [fetchMemories])
+
+  // Client-side filter
   const filtered = activeFilter === 'all'
-    ? MOCK_MEMORIES
-    : MOCK_MEMORIES.filter(m => m.life_stage === activeFilter)
+    ? allMemories
+    : allMemories.filter(m => m.life_stage === activeFilter)
+
+  // Toggle like — optimistic update then sync with DB
+  async function handleToggleLike(memoryId: string) {
+    if (!user?.id) return
+
+    // Optimistic update
+    setAllMemories(prev => prev.map(m => {
+      if (m.id !== memoryId) return m
+      const nowLiked = !m.liked_by_me
+      return {
+        ...m,
+        liked_by_me: nowLiked,
+        likes_count: nowLiked ? m.likes_count + 1 : Math.max(0, m.likes_count - 1),
+      }
+    }))
+
+    // Also update selected overlay if open
+    setSelected(prev => {
+      if (!prev || prev.id !== memoryId) return prev
+      const nowLiked = !prev.liked_by_me
+      return {
+        ...prev,
+        liked_by_me: nowLiked,
+        likes_count: nowLiked ? prev.likes_count + 1 : Math.max(0, prev.likes_count - 1),
+      }
+    })
+
+    // Sync with Supabase (fire and forget; revert not shown for UX simplicity)
+    try {
+      await toggleLike(memoryId, user.id)
+    } catch {
+      // Revert optimistic update on failure
+      setAllMemories(prev => prev.map(m => {
+        if (m.id !== memoryId) return m
+        const revert = !m.liked_by_me
+        return { ...m, liked_by_me: revert, likes_count: revert ? m.likes_count + 1 : Math.max(0, m.likes_count - 1) }
+      }))
+    }
+  }
 
   return (
     <>
@@ -341,11 +401,7 @@ export default function MemoriasPage() {
       <div style={{ background: 'var(--surface-page)', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
-        <div
-          style={{
-            padding: '20px 20px 0',
-          }}
-        >
+        <div style={{ padding: '20px 20px 0' }}>
           <h1
             style={{
               fontFamily: 'var(--font-display)',
@@ -358,7 +414,7 @@ export default function MemoriasPage() {
             Memórias
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
-            {MOCK_MEMORIES.length} memórias registradas
+            {loading ? 'Carregando...' : `${allMemories.length} memória${allMemories.length !== 1 ? 's' : ''} registrada${allMemories.length !== 1 ? 's' : ''}`}
           </p>
         </div>
 
@@ -400,7 +456,15 @@ export default function MemoriasPage() {
 
         {/* Memory list */}
         <div style={{ flex: 1, padding: '0 20px 100px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+              <span style={{
+                width: 36, height: 36, border: '3px solid var(--border-subtle)',
+                borderTopColor: 'var(--accent)', borderRadius: '50%',
+                animation: 'spin 0.7s linear infinite', display: 'inline-block',
+              }} />
+            </div>
+          ) : filtered.length === 0 ? (
             <div
               style={{
                 flex: 1,
@@ -411,21 +475,37 @@ export default function MemoriasPage() {
                 gap: 12,
                 padding: '60px 0',
                 color: 'var(--text-muted)',
+                textAlign: 'center',
               }}
             >
               <Icon name="inbox" size={48} color="var(--border-strong)" strokeWidth={1.5} />
-              <p style={{ fontSize: 15, margin: 0 }}>Nenhuma memória encontrada</p>
+              <p style={{ fontSize: 15, margin: 0 }}>
+                {allMemories.length === 0
+                  ? 'Nenhuma memória encontrada. Toque em + para criar a primeira! 💜'
+                  : 'Nenhuma memória nesta categoria.'}
+              </p>
             </div>
           ) : (
             filtered.map(m => (
-              <MemoryCard key={m.id} memory={m} onOpen={() => setSelected(m)} />
+              <MemoryCard
+                key={m.id}
+                memory={m}
+                onOpen={() => setSelected(m)}
+                onToggleLike={handleToggleLike}
+              />
             ))
           )}
         </div>
       </div>
 
       {/* ImageViewer overlay */}
-      {selected && <ImageViewer memory={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ImageViewer
+          memory={selected}
+          onClose={() => setSelected(null)}
+          onToggleLike={handleToggleLike}
+        />
+      )}
     </>
   )
 }

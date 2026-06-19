@@ -8,7 +8,23 @@ import Button from '@/components/ui/Button'
 import StatusBar from '@/components/ui/StatusBar'
 import ScreenHeader from '@/components/ui/ScreenHeader'
 import { useApp } from '@/contexts/AppContext'
-import type { User } from '@/types'
+import { signUpWithEmail } from '@/lib/supabase/queries'
+
+function translateError(msg: string): string {
+  if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('User already registered')) {
+    return 'Já existe uma conta com esse e-mail.'
+  }
+  if (msg.includes('Password should be')) {
+    return 'Senha deve ter pelo menos 6 caracteres.'
+  }
+  if (msg.includes('invalid email') || msg.includes('Invalid email')) {
+    return 'E-mail inválido.'
+  }
+  if (msg.includes('Too many requests')) {
+    return 'Muitas tentativas. Aguarde alguns minutos.'
+  }
+  return 'Ocorreu um erro ao criar a conta. Tente novamente.'
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -24,17 +40,28 @@ export default function RegisterPage() {
     if (!name || !email || !password) { setError('Preencha todos os campos.'); return }
     if (password.length < 6) { setError('Senha deve ter pelo menos 6 caracteres.'); return }
     setLoading(true)
-    await new Promise(r => setTimeout(r, 800))
+    setError('')
 
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      email,
-      name,
-      plan: 'free',
-      created_at: new Date().toISOString(),
+    try {
+      const data = await signUpWithEmail(email, password, name)
+      const authUser = data.user
+      if (!authUser) throw new Error('Falha ao criar conta.')
+
+      setUser({
+        id: authUser.id,
+        email: authUser.email ?? email,
+        name,
+        plan: 'free',
+        created_at: authUser.created_at,
+      })
+
+      router.push('/criar-bebe/passo-1')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(translateError(msg))
+    } finally {
+      setLoading(false)
     }
-    setUser(newUser)
-    router.push('/criar-bebe/passo-1')
   }
 
   return (

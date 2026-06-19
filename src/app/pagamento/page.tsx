@@ -18,17 +18,20 @@ function getProductInfo(params: URLSearchParams) {
   const plan = params.get('plan') || 'premium'
   const billing = params.get('billing') || 'monthly'
   const amount = params.get('amount') || '49.90'
+  const uid = params.get('uid') || ''
+  const senderName = params.get('senderName') || ''
+  const message = params.get('message') || ''
 
   if (type === 'upgrade') {
     return {
-      type, plan, billing, amount,
+      type, plan, billing, amount, uid, senderName, message,
       name: `Plano Premium — ${billing === 'yearly' ? 'Anual' : 'Mensal'}`,
       price: billing === 'yearly' ? 'R$ 249,90/ano' : 'R$ 29,90/mês',
       icon: '👑',
     }
   }
   return {
-    type, plan, billing, amount,
+    type, plan, billing, amount, uid, senderName, message,
     name: `Gift Card Memora Bebê`,
     price: `R$ ${parseFloat(amount).toFixed(2).replace('.', ',')}`,
     icon: '🎁',
@@ -36,7 +39,7 @@ function getProductInfo(params: URLSearchParams) {
 }
 
 // ── Formulário Stripe ─────────────────────────────────────────────────────────
-function CheckoutForm({ productName, onSuccess }: { productName: string; onSuccess: () => void }) {
+function CheckoutForm({ productName, returnUrl, onSuccess }: { productName: string; returnUrl: string; onSuccess: () => void }) {
   const stripe = useStripe()
   const elements = useElements()
   const [loading, setLoading] = useState(false)
@@ -53,7 +56,7 @@ function CheckoutForm({ productName, onSuccess }: { productName: string; onSucce
 
     const { error: confirmErr } = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: window.location.origin + '/pagamento/sucesso' },
+      confirmParams: { return_url: returnUrl },
       redirect: 'if_required',
     })
 
@@ -153,6 +156,9 @@ function PagamentoContent() {
         plan: product.plan,
         billing: product.billing,
         amount: product.amount,
+        userId: product.uid,
+        senderName: product.senderName,
+        message: product.message,
       }),
     })
       .then(r => r.json())
@@ -238,7 +244,11 @@ function PagamentoContent() {
                 locale: 'pt-BR',
               }}
             >
-              <CheckoutForm productName={product.name} onSuccess={() => setSuccess(true)} />
+              <CheckoutForm
+                productName={product.name}
+                returnUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/pagamento/sucesso?type=${product.type}&uid=${product.uid}`}
+                onSuccess={() => setSuccess(true)}
+              />
             </Elements>
           )}
         </div>

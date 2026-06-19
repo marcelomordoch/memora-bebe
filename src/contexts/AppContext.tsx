@@ -1,7 +1,9 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import type { User, Baby, Plan } from '@/types'
+import { createClient } from '@/lib/supabase/client'
+import { getCurrentProfile, getBaby, signOut } from '@/lib/supabase/queries'
 
 interface AppState {
   user: User | null
@@ -16,86 +18,83 @@ interface AppState {
 
 const AppContext = createContext<AppState | null>(null)
 
-const DEMO_USER: User = {
-  id: 'demo-1',
-  email: 'demo@memorabebe.com.br',
-  name: 'Juliana',
-  plan: 'free',
-  created_at: new Date().toISOString(),
-}
-
-const DEMO_BABY: Baby = {
-  id: 'baby-1',
-  user_id: 'demo-1',
-  name: 'Sofia',
-  gender: 'menina',
-  status: 'gestacao',
-  week: 24,
-  due_date: new Date(Date.now() + 86400000 * 112).toISOString(),
-  about: 'Nossa princesinha que está chegando cheinha de amor e alegria! 💜',
-  created_at: new Date().toISOString(),
-}
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [baby, setBaby] = useState<Baby | null>(null)
   const [plan, setPlan] = useState<Plan>('free')
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    // Restore session from localStorage (demo mode)
-    const saved = localStorage.getItem('mb_session')
-    if (saved) {
-      try {
-        const { user: u, baby: b, plan: p } = JSON.parse(saved)
-        setUser(u)
-        setBaby(b)
-        setPlan(p || 'free')
-      } catch {}
+  const loadUserData = useCallback(async (authUserId: string) => {
+    try {
+      const profile = await getCurrentProfile()
+      if (profile) {
+        const appUser: User = {
+          id: profile.id,
+          email: profile.email ?? '',
+          name: profile.name ?? '',
+          plan: (profile.plan as Plan) ?? 'free',
+          created_at: profile.created_at,
+        }
+        setUser(appUser)
+        setPlan(appUser.plan)
+      }
+      const babyData = await getBaby(authUserId)
+      setBaby(babyData)
+    } catch (err) {
+      console.error('Failed to load user data:', err)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [])
 
-  const handleSetUser = (u: User | null) => {
-    setUser(u)
-    if (u) {
-      const current = localStorage.getItem('mb_session')
-      const parsed = current ? JSON.parse(current) : {}
-      localStorage.setItem('mb_session', JSON.stringify({ ...parsed, user: u }))
-    }
-  }
+  useEffect(() => {
+    const supabase = createClient()
 
-  const handleSetBaby = (b: Baby | null) => {
-    setBaby(b)
-    const current = localStorage.getItem('mb_session')
-    const parsed = current ? JSON.parse(current) : {}
-    localStorage.setItem('mb_session', JSON.stringify({ ...parsed, baby: b }))
-  }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserData(session.user.id)
+      } else {
+        setIsLoading(false)
+      }
+    })
 
-  const handleSetPlan = (p: Plan) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          await loadUserData(session.user.id)
+        } else {
+          setUser(null)
+          setBaby(null)
+          setPlan('free')
+          setIsLoading(false)
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [loadUserData])
+
+  const handleSetPlan = useCallback((p: Plan) => {
     setPlan(p)
-    const current = localStorage.getItem('mb_session')
-    const parsed = current ? JSON.parse(current) : {}
-    localStorage.setItem('mb_session', JSON.stringify({ ...parsed, plan: p }))
-    if (user) {
-      const updatedUser = { ...user, plan: p }
-      setUser(updatedUser)
-      localStorage.setItem('mb_session', JSON.stringify({ ...parsed, plan: p, user: updatedUser }))
-    }
-  }
+    setUser(prev => prev ? { ...prev, plan: p } : prev)
+  }, [])
 
-  const logout = () => {
-    setUser(null)
-    setBaby(null)
-    setPlan('free')
-    localStorage.removeItem('mb_session')
-  }
+  const logout = useCallback(async () => {
+    try {
+      await signOut()
+    } catch (err) {
+      console.error('Logout error:', err)
+    } finally {
+      setUser(null)
+      setBaby(null)
+      setPlan('free')
+    }
+  }, [])
 
   return (
     <AppContext.Provider value={{
       user, baby, plan, isLoading,
-      setUser: handleSetUser,
-      setBaby: handleSetBaby,
+      setUser, setBaby,
       setPlan: handleSetPlan,
       logout,
     }}>
@@ -109,5 +108,3 @@ export function useApp() {
   if (!ctx) throw new Error('useApp must be used within AppProvider')
   return ctx
 }
-
-export { DEMO_USER, DEMO_BABY }
