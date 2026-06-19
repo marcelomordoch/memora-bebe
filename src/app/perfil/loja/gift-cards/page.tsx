@@ -159,7 +159,7 @@ export default function GiftCardsPage() {
           <Button
             variant="primary"
             fullWidth
-            onClick={() => router.push(`/pagamento?type=giftcard&amount=${selectedAmount}`)}
+            onClick={() => router.push(`/pagamento?type=giftcard&amount=${selectedAmount.replace(',', '.')}`)}
           >
             Comprar agora
           </Button>
