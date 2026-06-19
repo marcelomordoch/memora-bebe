@@ -1,5 +1,7 @@
 -- ============================================================
 -- Memora Bebê — Supabase Schema
+-- Execute este arquivo uma única vez no SQL Editor do Supabase.
+-- Seguro para re-executar: usa IF NOT EXISTS em todo lugar.
 -- ============================================================
 
 -- Extensões
@@ -10,7 +12,7 @@ create extension if not exists "uuid-ossp";
 -- ============================================================
 
 -- Perfis de usuário (complementa auth.users)
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   name text not null,
   plan text not null default 'free' check (plan in ('free','premium')),
@@ -21,7 +23,7 @@ create table public.profiles (
 );
 
 -- Bebês
-create table public.babies (
+create table if not exists public.babies (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references public.profiles(id) on delete cascade not null,
   name text not null,
@@ -36,7 +38,7 @@ create table public.babies (
 );
 
 -- Memórias
-create table public.memories (
+create table if not exists public.memories (
   id uuid primary key default uuid_generate_v4(),
   baby_id uuid references public.babies(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
@@ -53,7 +55,7 @@ create table public.memories (
 );
 
 -- Curtidas
-create table public.memory_likes (
+create table if not exists public.memory_likes (
   memory_id uuid references public.memories(id) on delete cascade,
   user_id uuid references public.profiles(id) on delete cascade,
   created_at timestamptz not null default now(),
@@ -61,7 +63,7 @@ create table public.memory_likes (
 );
 
 -- Comentários
-create table public.memory_comments (
+create table if not exists public.memory_comments (
   id uuid primary key default uuid_generate_v4(),
   memory_id uuid references public.memories(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
@@ -70,7 +72,7 @@ create table public.memory_comments (
 );
 
 -- Membros da família
-create table public.family_members (
+create table if not exists public.family_members (
   id uuid primary key default uuid_generate_v4(),
   baby_id uuid references public.babies(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade,
@@ -83,7 +85,7 @@ create table public.family_members (
 );
 
 -- Conquistas
-create table public.achievements (
+create table if not exists public.achievements (
   id uuid primary key default uuid_generate_v4(),
   baby_id uuid references public.babies(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
@@ -94,7 +96,7 @@ create table public.achievements (
 );
 
 -- Mensagens para o futuro
-create table public.future_messages (
+create table if not exists public.future_messages (
   id uuid primary key default uuid_generate_v4(),
   baby_id uuid references public.babies(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
@@ -106,7 +108,7 @@ create table public.future_messages (
 );
 
 -- Gift Cards
-create table public.gift_cards (
+create table if not exists public.gift_cards (
   id uuid primary key default uuid_generate_v4(),
   code text unique not null,
   amount numeric(10,2) not null,
@@ -122,7 +124,7 @@ create table public.gift_cards (
 );
 
 -- Pagamentos
-create table public.payments (
+create table if not exists public.payments (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references public.profiles(id) on delete cascade not null,
   mp_payment_id text,
@@ -135,7 +137,7 @@ create table public.payments (
 );
 
 -- Notificações
-create table public.notifications (
+create table if not exists public.notifications (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references public.profiles(id) on delete cascade not null,
   type text not null check (type in ('memory','milestone','family','offer','system')),
@@ -149,16 +151,22 @@ create table public.notifications (
 -- FUNÇÕES & TRIGGERS
 -- ============================================================
 
--- Trigger: criar perfil ao registrar usuário
+-- Função: criar perfil ao registrar usuário
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id, name)
-  values (new.id, coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)));
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1))
+  )
+  on conflict (id) do nothing;
   return new;
 end;
 $$ language plpgsql security definer;
 
+-- Trigger: dispara a função acima ao criar usuário
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
@@ -170,16 +178,22 @@ declare
   already_liked boolean;
 begin
   select exists(
-    select 1 from public.memory_likes where memory_id = p_memory_id and user_id = p_user_id
+    select 1 from public.memory_likes
+    where memory_id = p_memory_id and user_id = p_user_id
   ) into already_liked;
 
   if already_liked then
-    delete from public.memory_likes where memory_id = p_memory_id and user_id = p_user_id;
-    update public.memories set likes_count = likes_count - 1 where id = p_memory_id;
+    delete from public.memory_likes
+    where memory_id = p_memory_id and user_id = p_user_id;
+    update public.memories set likes_count = greatest(0, likes_count - 1)
+    where id = p_memory_id;
     return false;
   else
-    insert into public.memory_likes (memory_id, user_id) values (p_memory_id, p_user_id);
-    update public.memories set likes_count = likes_count + 1 where id = p_memory_id;
+    insert into public.memory_likes (memory_id, user_id)
+    values (p_memory_id, p_user_id)
+    on conflict do nothing;
+    update public.memories set likes_count = likes_count + 1
+    where id = p_memory_id;
     return true;
   end if;
 end;
@@ -189,44 +203,109 @@ $$ language plpgsql security definer;
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================================
 
-alter table public.profiles enable row level security;
-alter table public.babies enable row level security;
-alter table public.memories enable row level security;
-alter table public.memory_likes enable row level security;
+alter table public.profiles       enable row level security;
+alter table public.babies         enable row level security;
+alter table public.memories       enable row level security;
+alter table public.memory_likes   enable row level security;
 alter table public.memory_comments enable row level security;
 alter table public.family_members enable row level security;
-alter table public.achievements enable row level security;
+alter table public.achievements   enable row level security;
 alter table public.future_messages enable row level security;
-alter table public.gift_cards enable row level security;
-alter table public.payments enable row level security;
-alter table public.notifications enable row level security;
+alter table public.gift_cards     enable row level security;
+alter table public.payments       enable row level security;
+alter table public.notifications  enable row level security;
 
--- Profiles: usuário vê e edita apenas o próprio perfil
-create policy "Perfil próprio" on public.profiles for all using (auth.uid() = id);
+-- Profiles
+drop policy if exists "Perfil próprio" on public.profiles;
+create policy "Perfil próprio" on public.profiles
+  for all using (auth.uid() = id);
 
--- Babies: apenas o dono e família
-create policy "Bebê do usuário" on public.babies for all using (auth.uid() = user_id);
+-- Babies
+drop policy if exists "Bebê do usuário" on public.babies;
+create policy "Bebê do usuário" on public.babies
+  for all using (auth.uid() = user_id);
 
--- Memories: dono vê e edita; família vê
-create policy "Memórias do usuário" on public.memories for all using (auth.uid() = user_id);
+-- Memories: dono faz tudo; família pode ler
+drop policy if exists "Memórias do usuário" on public.memories;
+create policy "Memórias do usuário" on public.memories
+  for all using (auth.uid() = user_id);
 
--- Notifications: apenas o próprio usuário
-create policy "Notificações próprias" on public.notifications for all using (auth.uid() = user_id);
+-- Memory likes
+drop policy if exists "Curtidas" on public.memory_likes;
+create policy "Curtidas" on public.memory_likes
+  for all using (auth.uid() = user_id);
 
--- Payments: apenas o próprio usuário
-create policy "Pagamentos próprios" on public.payments for all using (auth.uid() = user_id);
+-- Memory comments
+drop policy if exists "Comentários" on public.memory_comments;
+create policy "Comentários" on public.memory_comments
+  for all using (auth.uid() = user_id);
 
--- Future messages: apenas o dono
-create policy "Mensagens futuras próprias" on public.future_messages for all using (auth.uid() = user_id);
+-- Family members
+drop policy if exists "Família" on public.family_members;
+create policy "Família" on public.family_members
+  for all using (
+    auth.uid() = user_id or
+    exists (
+      select 1 from public.babies b
+      where b.id = baby_id and b.user_id = auth.uid()
+    )
+  );
 
--- Gift cards: apenas resgate pelo destinatário
-create policy "Gift cards" on public.gift_cards for select using (true);
-create policy "Gift cards redeem" on public.gift_cards for update using (auth.uid() = redeemed_by);
+-- Achievements
+drop policy if exists "Conquistas próprias" on public.achievements;
+create policy "Conquistas próprias" on public.achievements
+  for all using (auth.uid() = user_id);
+
+-- Future messages
+drop policy if exists "Mensagens futuras próprias" on public.future_messages;
+create policy "Mensagens futuras próprias" on public.future_messages
+  for all using (auth.uid() = user_id);
+
+-- Gift cards
+drop policy if exists "Gift cards leitura" on public.gift_cards;
+create policy "Gift cards leitura" on public.gift_cards
+  for select using (true);
+
+drop policy if exists "Gift cards resgate" on public.gift_cards;
+create policy "Gift cards resgate" on public.gift_cards
+  for update using (
+    redeemed = false and
+    (recipient_email is null or recipient_email = (
+      select email from auth.users where id = auth.uid()
+    ))
+  );
+
+-- Payments
+drop policy if exists "Pagamentos próprios" on public.payments;
+create policy "Pagamentos próprios" on public.payments
+  for all using (auth.uid() = user_id);
+
+-- Notifications
+drop policy if exists "Notificações próprias" on public.notifications;
+create policy "Notificações próprias" on public.notifications
+  for all using (auth.uid() = user_id);
 
 -- ============================================================
 -- STORAGE BUCKETS
+-- (execute separadamente após criar os buckets no dashboard)
 -- ============================================================
--- Execute após configurar o projeto no dashboard Supabase:
--- insert into storage.buckets (id, name, public) values ('memories', 'memories', true);
--- insert into storage.buckets (id, name, public) values ('babies', 'babies', true);
--- insert into storage.buckets (id, name, public) values ('audio', 'audio', false);
+-- No dashboard: Storage → New bucket → preencha nome e marque Public se necessário.
+--
+-- Buckets necessários:
+--   memories  (public)
+--   babies    (public)
+--   audio     (private)
+--
+-- Policies de storage (execute depois de criar os buckets):
+-- ------------------------------------------------------------
+-- insert into storage.buckets (id, name, public)
+-- values ('memories', 'memories', true)
+-- on conflict (id) do nothing;
+--
+-- insert into storage.buckets (id, name, public)
+-- values ('babies', 'babies', true)
+-- on conflict (id) do nothing;
+--
+-- insert into storage.buckets (id, name, public)
+-- values ('audio', 'audio', false)
+-- on conflict (id) do nothing;
