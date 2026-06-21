@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import StatusBar from '@/components/ui/StatusBar'
 import ScreenHeader from '@/components/ui/ScreenHeader'
 import { useApp } from '@/contexts/AppContext'
-import { getFutureMessages, createFutureMessage } from '@/lib/supabase/queries'
+import { getFutureMessages, createFutureMessage, unlockAchievement } from '@/lib/supabase/queries'
 import type { FutureMessage } from '@/types'
 
 const ageOptions = [
@@ -47,6 +47,8 @@ export default function MensagensPage() {
     try {
       const created = await createFutureMessage({ baby_id: baby.id, user_id: user.id, title: formTitle.trim(), body: formBody.trim(), open_at_age: formAge })
       setMessages((prev) => [created, ...prev])
+      // Desbloquear conquista "mensagem-tempo"
+      unlockAchievement(baby.id, user.id, 'mensagem-tempo', 250).catch(() => {})
       setShowForm(false)
       setFormTitle('')
       setFormBody('')

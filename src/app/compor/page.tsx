@@ -7,7 +7,7 @@ import StatusBar from '@/components/ui/StatusBar'
 import ScreenHeader from '@/components/ui/ScreenHeader'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { createMemory, uploadMemoryMedia } from '@/lib/supabase/queries'
+import { createMemory, uploadMemoryMedia, unlockAchievement, getMemories } from '@/lib/supabase/queries'
 import { MEMORY_COLORS } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -219,6 +219,12 @@ export default function ComporPage() {
       })
       // 2. Upload da foto para o bucket 'memories' e vincular à memória
       await uploadMemoryMedia(memory.id, photoFile, 'foto')
+
+      // 3. Verificar conquista 'fotografo' (5 fotos)
+      const allMems = await getMemories(baby.id)
+      const photoCount = allMems.filter(m => m.type === 'foto').length
+      if (photoCount >= 5) unlockAchievement(baby.id, user.id, 'fotografo', 150).catch(() => {})
+
       setShowPhotoForm(false)
       setPhotoFile(null)
       setPhotoTitle('')

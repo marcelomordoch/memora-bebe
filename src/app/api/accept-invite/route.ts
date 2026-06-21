@@ -45,6 +45,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 })
     }
 
+    // Desbloquear conquista "familia-conectada" para quem aceitou o convite
+    try {
+      await admin.from('achievements').upsert(
+        { baby_id: invite.baby_id, user_id: user.id, achievement_key: 'familia-conectada', xp: 100 },
+        { onConflict: 'baby_id,achievement_key', ignoreDuplicates: true }
+      )
+    } catch { /* conquista não crítica */ }
+
     return NextResponse.json({ success: true, babyId: invite.baby_id })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Erro interno'

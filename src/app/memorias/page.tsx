@@ -64,7 +64,7 @@ function ImageViewer({
         onClick={e => e.stopPropagation()}
       >
         {memory.media_url
-          ? <img src={memory.media_url} alt={memory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          ? <img src={memory.media_url} alt={memory.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
           : <span style={{ fontSize: 88 }}>{memory.emoji || '💜'}</span>
         }
 
@@ -249,104 +249,58 @@ function MemoryCard({
         border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-md)',
         display: 'flex',
+        flexDirection: memory.media_url ? 'column' : 'row',
         overflow: 'hidden',
         cursor: 'pointer',
       }}
     >
-      {/* Left – imagem ou emoji */}
-      <div style={{ width: 100, flexShrink: 0, background: memory.bg_color || 'var(--gradient-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
-        {memory.media_url
-          ? <img src={memory.media_url} alt={memory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'absolute', inset: 0 }} />
-          : <span style={{ fontSize: 40 }}>{memory.emoji || '💜'}</span>
-        }
-      </div>
-
-      {/* Right – content */}
-      <div style={{ flex: 1, padding: 14, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, position: 'relative' }}>
-        {/* Heart button */}
-        <button
-          onClick={handleLike}
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            background: 'transparent',
-            border: liked ? 'none' : '1.5px solid var(--border-strong)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            padding: 0,
-          }}
-        >
-          <Icon
-            name="heart"
-            size={16}
-            color={liked ? '#C76FB0' : 'var(--border-strong)'}
-            strokeWidth={liked ? 0 : 2}
-          />
-        </button>
-
-        {/* Title */}
-        <p
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 600,
-            fontSize: 14,
-            color: 'var(--text-strong)',
-            margin: 0,
-            paddingRight: 40,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {memory.title}
-        </p>
-
-        {/* Date */}
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-          {formatShortDate(memory.created_at)}
-        </p>
-
-        {/* Body preview */}
-        <p
-          style={{
-            fontSize: 13,
-            color: 'var(--text-body)',
-            margin: 0,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {memory.body}
-        </p>
-
-        {/* Footer */}
-        <div
-          style={{
-            marginTop: 6,
-            paddingTop: 8,
-            borderTop: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Icon name="heart" size={12} color="var(--rose-500)" strokeWidth={0} />
-            {count} curtida{count !== 1 ? 's' : ''}
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-accent)' }}>
-            Ver memória
-          </span>
-        </div>
-      </div>
+      {memory.media_url ? (
+        /* ── Layout vertical quando tem foto ── */
+        <>
+          {/* Foto por inteira, sem corte */}
+          <div style={{ width: '100%', background: memory.bg_color || '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, maxHeight: 320, overflow: 'hidden' }}>
+            <img
+              src={memory.media_url}
+              alt={memory.title}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', maxHeight: 320 }}
+            />
+          </div>
+          {/* Texto abaixo — 3 linhas + scroll */}
+          <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4, position: 'relative' }}>
+            <button onClick={handleLike} style={{ position: 'absolute', top: 10, right: 12, width: 30, height: 30, borderRadius: '50%', background: 'transparent', border: liked ? 'none' : '1.5px solid var(--border-strong)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+              <Icon name="heart" size={15} color={liked ? '#C76FB0' : 'var(--border-strong)'} strokeWidth={liked ? 0 : 2} />
+            </button>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: 'var(--text-strong)', margin: 0, paddingRight: 36, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{memory.title}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{formatShortDate(memory.created_at)}</p>
+            {memory.body && (
+              <p style={{ fontSize: 13, color: 'var(--text-body)', margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowY: 'auto', maxHeight: 60 }}>{memory.body}</p>
+            )}
+          </div>
+        </>
+      ) : (
+        /* ── Layout horizontal quando só tem emoji/texto ── */
+        <>
+          <div style={{ width: 100, flexShrink: 0, background: memory.bg_color || 'var(--gradient-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 40 }}>{memory.emoji || '💜'}</span>
+          </div>
+          <div style={{ flex: 1, padding: 14, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, position: 'relative' }}>
+            <button onClick={handleLike} style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', background: 'transparent', border: liked ? 'none' : '1.5px solid var(--border-strong)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+              <Icon name="heart" size={16} color={liked ? '#C76FB0' : 'var(--border-strong)'} strokeWidth={liked ? 0 : 2} />
+            </button>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: 'var(--text-strong)', margin: 0, paddingRight: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{memory.title}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{formatShortDate(memory.created_at)}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-body)', margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{memory.body}</p>
+            {/* Footer */}
+            <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="heart" size={12} color="var(--rose-500)" strokeWidth={0} />
+                {count} curtida{count !== 1 ? 's' : ''}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-accent)' }}>Ver memória</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
