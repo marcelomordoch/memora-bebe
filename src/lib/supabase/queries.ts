@@ -61,25 +61,14 @@ export async function signUpWithEmail(email: string, password: string, name: str
   })
   if (error) throw error
 
-  // Garantir que o perfil existe imediatamente (não depender só do trigger)
-  if (data.user) {
-    await supabase.from('profiles').upsert(
-      { id: data.user.id, name, email, plan: 'free' },
-      { onConflict: 'id', ignoreDuplicates: true }
-    )
-  }
+  // O trigger handle_new_user cria o perfil — não precisamos fazer nada aqui
 
   return data
 }
 
-// Garante que o perfil do usuário existe — chame antes de operações que dependem dele
-export async function ensureProfile(userId: string, email: string, name: string): Promise<void> {
-  const supabase = createClient()
-  const { error } = await supabase.from('profiles').upsert(
-    { id: userId, name: name || email.split('@')[0], email, plan: 'free' },
-    { onConflict: 'id', ignoreDuplicates: true }
-  )
-  if (error) console.warn('[ensureProfile]', error.message)
+// Mantida por compatibilidade — o perfil é criado pelo trigger ou pela API route /api/setup
+export async function ensureProfile(_userId: string, _email: string, _name: string): Promise<void> {
+  // Perfil é garantido pelo trigger handle_new_user e pela rota /api/setup
 }
 
 export async function signOut() {

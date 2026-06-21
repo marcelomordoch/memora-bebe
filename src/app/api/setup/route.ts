@@ -29,13 +29,12 @@ export async function POST(req: NextRequest) {
 
     const admin = adminClient()
 
-    // 1. Garantir que o perfil existe (upsert como admin)
+    // 1. Garantir que o perfil existe (upsert como admin — sem email para evitar cache issue)
     const displayName = user.user_metadata?.name || name || user.email?.split('@')[0] || 'Usuária'
     const { error: profileError } = await admin.from('profiles').upsert(
       {
         id: user.id,
         name: displayName,
-        email: user.email,
         plan: 'free',
       },
       { onConflict: 'id' }
