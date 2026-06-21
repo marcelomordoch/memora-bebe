@@ -101,7 +101,17 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
   const { setPlan } = useApp()
 
   useEffect(() => {
-    if (product.type === 'upgrade') setPlan('premium')
+    if (product.type !== 'upgrade') return
+    // Atualiza estado local imediatamente
+    setPlan('premium')
+    // Persiste no banco via API route (usa sessão do servidor, não depende de uid na URL)
+    fetch('/api/upgrade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ billing: product.billing }),
+    }).then(r => r.json()).then(d => {
+      if (!d.success) console.error('[upgrade]', d.error)
+    }).catch(console.error)
   }, []) // eslint-disable-line
 
   return (

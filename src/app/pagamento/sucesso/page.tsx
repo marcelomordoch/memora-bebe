@@ -6,7 +6,6 @@ import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import Button from '@/components/ui/Button'
 import { useApp } from '@/contexts/AppContext'
-import { upgradeToPremium } from '@/lib/supabase/queries'
 
 function SucessoContent() {
   const router = useRouter()
@@ -17,30 +16,29 @@ function SucessoContent() {
   const type = params.get('type') || 'upgrade'
   const paymentIntent = params.get('payment_intent')
   const redirectStatus = params.get('redirect_status')
-  const uid = params.get('uid') || ''
+  const billing = params.get('billing') || 'monthly'
 
   const isUpgrade = type === 'upgrade'
 
   useEffect(() => {
-    // Guard: run only once even in strict-mode double-invoke
     if (handled.current) return
     handled.current = true
 
-    // Stripe redirects here with redirect_status=succeeded when payment requires redirect
-    // For card payments that don't redirect, the success page is reached via onSuccess() callback
-    // In both cases we apply the upgrade
     const shouldUpgrade = isUpgrade && (redirectStatus === 'succeeded' || !redirectStatus)
     if (!shouldUpgrade) return
 
-    // Optimistic UI update — instant
+    // Atualiza estado local imediatamente
     setPlan('premium')
 
-    // Persist to Supabase if we have a userId (belt + suspenders alongside the webhook)
-    if (uid) {
-      upgradeToPremium(uid).catch((err) => {
-        console.error('Client-side upgradeToPremium failed (webhook will handle it):', err)
-      })
-    }
+    // Persiste no banco via API route server-side (usa sessão, não depende de uid na URL)
+    fetch('/api/upgrade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ billing }),
+    }).then(r => r.json()).then(d => {
+      if (d.success) console.log('[sucesso] premium ativado até', d.expiresAt)
+      else console.error('[sucesso] upgrade falhou:', d.error)
+    }).catch(console.error)
   }, []) // eslint-disable-line
 
   return (

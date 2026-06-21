@@ -44,7 +44,7 @@ function ImageViewer({
       }}
       onClick={onClose}
     >
-      {/* Top – colored hero */}
+      {/* Top – imagem ou hero colorido */}
       <div
         style={{
           height: '56%',
@@ -54,10 +54,14 @@ function ImageViewer({
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
+          overflow: 'hidden',
         }}
         onClick={e => e.stopPropagation()}
       >
-        <span style={{ fontSize: 88 }}>{memory.emoji || '💜'}</span>
+        {memory.media_url
+          ? <img src={memory.media_url} alt={memory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : <span style={{ fontSize: 88 }}>{memory.emoji || '💜'}</span>
+        }
 
         {/* Close button */}
         <button
@@ -220,18 +224,12 @@ function MemoryCard({
         cursor: 'pointer',
       }}
     >
-      {/* Left – colored hero */}
-      <div
-        style={{
-          width: 100,
-          flexShrink: 0,
-          background: memory.bg_color || 'var(--gradient-brand)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <span style={{ fontSize: 40 }}>{memory.emoji || '💜'}</span>
+      {/* Left – imagem ou emoji */}
+      <div style={{ width: 100, flexShrink: 0, background: memory.bg_color || 'var(--gradient-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+        {memory.media_url
+          ? <img src={memory.media_url} alt={memory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'absolute', inset: 0 }} />
+          : <span style={{ fontSize: 40 }}>{memory.emoji || '💜'}</span>
+        }
       </div>
 
       {/* Right – content */}

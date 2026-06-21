@@ -7,7 +7,7 @@ import StatusBar from '@/components/ui/StatusBar'
 import ScreenHeader from '@/components/ui/ScreenHeader'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { getFamilyMembers, createFamilyInvite } from '@/lib/supabase/queries'
+import { getFamilyMembers, createFamilyInvite, unlockAchievement } from '@/lib/supabase/queries'
 import type { FamilyMember } from '@/types'
 
 function getInitials(name: string) {
@@ -31,7 +31,7 @@ const ROLE_OPTIONS = [
 
 export default function FamiliaPage() {
   const router = useRouter()
-  const { baby } = useApp()
+  const { baby, user } = useApp()
 
   const [members, setMembers] = useState<FamilyMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,6 +64,10 @@ export default function FamiliaPage() {
       const token = member.invite_token ?? null
       setInviteToken(token)
       getFamilyMembers(baby.id).then(setMembers).catch(() => {})
+      // Desbloquear conquista "familia-conectada"
+      if (user?.id) {
+        unlockAchievement(baby.id, user.id, 'familia-conectada', 100).catch(() => {})
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao gerar convite'
       setInviteError(msg)

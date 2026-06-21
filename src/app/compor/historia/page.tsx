@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button';
 import AppShell from '@/components/layout/AppShell';
 import { MEMORY_EMOJIS, MEMORY_COLORS } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
-import { createMemory } from '@/lib/supabase/queries';
+import { createMemory, unlockAchievement, getMemories } from '@/lib/supabase/queries';
 
 type LifeStage = 'gestacao' | '0-1' | '1-3' | 'escola';
 
@@ -50,12 +50,23 @@ function HistoriaContent() {
         emoji: selectedEmoji ?? undefined,
         bg_color: MEMORY_COLORS[stage],
         week: baby.week,
-      });
-      router.push('/memorias');
+      })
+
+      // Desbloquear conquista "primeira-memoria" na primeira memória
+      const allMemories = await getMemories(baby.id)
+      if (allMemories.length <= 1) {
+        await unlockAchievement(baby.id, user.id, 'primeira-memoria', 50).catch(() => {})
+      }
+      // Desbloquear "escritor" após 10 memórias
+      if (allMemories.length >= 10) {
+        await unlockAchievement(baby.id, user.id, 'escritor', 200).catch(() => {})
+      }
+
+      router.push('/memorias')
     } catch (err) {
-      console.error(err);
-      setError('Erro ao salvar. Tente novamente.');
-      setLoading(false);
+      console.error(err)
+      setError('Erro ao salvar. Tente novamente.')
+      setLoading(false)
     }
   };
 
