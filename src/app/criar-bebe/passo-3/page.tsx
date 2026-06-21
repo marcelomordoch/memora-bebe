@@ -22,21 +22,29 @@ export default function CriarBebeStep3() {
     setError('')
 
     try {
-      // Salvar bebê no Supabase
-      const saved = await createBaby({
+      // Salvar bebê no Supabase — não passar id (Supabase gera automaticamente)
+      const payload: Record<string, unknown> = {
         user_id: user.id,
         name: baby!.name,
         gender: baby!.gender,
         status: baby!.status,
-        due_date: baby!.due_date,
-        birth_date: baby!.birth_date,
-        week: baby!.week,
-        about: about.trim() || undefined,
-      })
+        about: about.trim() || null,
+      }
+      // Só incluir datas se existirem (evitar empty string como date)
+      if (baby!.due_date) payload.due_date = baby!.due_date
+      if (baby!.birth_date) payload.birth_date = baby!.birth_date
+      if (baby!.week) payload.week = baby!.week
+
+      const saved = await createBaby(payload as Parameters<typeof createBaby>[0])
       setBaby(saved)
       router.push('/onboarding')
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.'
+      console.error('[passo-3] createBaby error:', err)
+      const msg = err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : 'Erro ao salvar. Tente novamente.'
       setError(msg)
       setLoading(false)
     }

@@ -87,10 +87,13 @@ export async function getBaby(userId: string): Promise<Baby | null> {
   return data ?? null
 }
 
-export async function createBaby(data: Partial<Baby>): Promise<Baby> {
+export async function createBaby(data: Partial<Baby> | Record<string, unknown>): Promise<Baby> {
   const supabase = createClient()
-  const { data: created, error } = await supabase.from('babies').insert(data).select().single()
-  if (error) throw error
+  // Nunca enviar id vazio — Supabase gera automaticamente via uuid_generate_v4()
+  const payload = { ...data }
+  if (!payload.id || payload.id === '') delete payload.id
+  const { data: created, error } = await supabase.from('babies').insert(payload).select().single()
+  if (error) throw new Error(error.message || JSON.stringify(error))
   return created
 }
 
