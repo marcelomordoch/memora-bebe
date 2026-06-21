@@ -6,6 +6,7 @@ import StatusBar from '@/components/ui/StatusBar'
 import Button from '@/components/ui/Button'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
+import { calculateCurrentWeek } from '@/lib/utils'
 
 export default function CriarBebeStep2() {
   const router = useRouter()
@@ -13,15 +14,16 @@ export default function CriarBebeStep2() {
   const [status, setStatus] = useState<'gestacao' | 'nascido'>('gestacao')
   const [dueDate, setDueDate] = useState('')
   const [birthDate, setBirthDate] = useState('')
-  const [week, setWeek] = useState(20)
 
   function handleNext() {
+    // Calcula a semana automaticamente a partir da due_date
+    const weekFromDate = dueDate ? calculateCurrentWeek({ due_date: dueDate }) : undefined
     setBaby({
       ...baby!,
       status,
-      due_date: status === 'gestacao' ? dueDate : undefined,
-      birth_date: status === 'nascido' ? birthDate : undefined,
-      week: status === 'gestacao' ? week : undefined,
+      due_date: status === 'gestacao' ? dueDate || undefined : undefined,
+      birth_date: status === 'nascido' ? birthDate || undefined : undefined,
+      week: status === 'gestacao' ? weekFromDate : undefined,
     })
     router.push('/criar-bebe/passo-3')
   }
@@ -82,23 +84,20 @@ export default function CriarBebeStep2() {
               />
             </div>
 
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 12 }}>
-                Semana da gestação
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-                <button onClick={() => setWeek(w => Math.max(1, w - 1))} style={{ width: 44, height: 44, borderRadius: '50%', border: '1.5px solid var(--border-strong)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="chevron-left" />
-                </button>
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 36, color: 'var(--accent)', minWidth: 60, textAlign: 'center' }}>
-                  {week}ª
-                </span>
-                <button onClick={() => setWeek(w => Math.min(42, w + 1))} style={{ width: 44, height: 44, borderRadius: '50%', border: '1.5px solid var(--border-strong)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="chevron-right" />
-                </button>
+            {dueDate && (
+              <div style={{ background: 'var(--violet-50)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 28 }}>🗓️</span>
+                <div>
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: 'var(--accent)', margin: 0 }}>
+                    Semana {calculateCurrentWeek({ due_date: dueDate })}ª da gestação
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0, marginTop: 2 }}>
+                    Calculado automaticamente a partir da DPP
+                  </p>
+                </div>
               </div>
-              <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', marginTop: 8 }}>semana da gestação (1–42)</p>
-            </div>
+            )}
+
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

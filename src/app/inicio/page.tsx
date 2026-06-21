@@ -8,7 +8,7 @@ import Icon from '@/components/ui/Icon'
 import Button from '@/components/ui/Button'
 import { useApp } from '@/contexts/AppContext'
 import { getMemories } from '@/lib/supabase/queries'
-import { formatShortDate } from '@/lib/utils'
+import { formatShortDate, calculateCurrentWeek, weeksUntilDue } from '@/lib/utils'
 import type { Memory } from '@/types'
 
 export default function DashboardPage() {
@@ -104,8 +104,8 @@ export default function DashboardPage() {
   }
 
   // ── Baby exists: full dashboard ───────────────────────────────────────────
-  const week = baby.week || 0
-  const weeksLeft = Math.max(0, 40 - week)
+  const week = calculateCurrentWeek(baby)
+  const weeksLeft = weeksUntilDue(baby)
   const progress = Math.min(100, (week / 40) * 100)
   const isNascido = baby.status === 'nascido'
 

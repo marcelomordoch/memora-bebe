@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import type { User, Baby, Plan } from '@/types'
 import { createClient } from '@/lib/supabase/client'
-import { getCurrentProfile, getBaby, signOut } from '@/lib/supabase/queries'
+import { getBaby, signOut } from '@/lib/supabase/queries'
 
 interface AppState {
   user: User | null
@@ -24,24 +24,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<Plan>('free')
   const [isLoading, setIsLoading] = useState(true)
 
-  const loadUserData = useCallback(async (authUserId: string) => {
+  const loadUserData = useCallback(async (authUser: { id: string; email?: string; user_metadata?: Record<string, string> }) => {
     try {
-      const profile = await getCurrentProfile()
-      if (profile) {
-        const appUser: User = {
-          id: profile.id,
-          email: profile.email ?? '',
-          name: profile.name ?? '',
-          plan: (profile.plan as Plan) ?? 'free',
-          created_at: profile.created_at,
-        }
-        setUser(appUser)
-        setPlan(appUser.plan)
+      const supabase = createClient()
+
+      // Buscar perfil — email vem do auth, não do profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, name, plan, credits, created_at')
+        .eq('id', authUser.id)
+        .single()
+
+      const appUser: User = {
+        id: authUser.id,
+        email: authUser.email ?? '',
+        name: profile?.name ?? authUser.user_metadata?.name ?? authUser.email?.split('@')[0] ?? '',
+        plan: (profile?.plan as Plan) ?? 'free',
+        created_at: profile?.created_at ?? new Date().toISOString(),
       }
-      const babyData = await getBaby(authUserId)
+      setUser(appUser)
+      setPlan(appUser.plan)
+
+      // Buscar bebê
+      const babyData = await getBaby(authUser.id)
       setBaby(babyData)
     } catch (err) {
-      console.error('Failed to load user data:', err)
+      console.error('[AppContext] loadUserData error:', err)
     } finally {
       setIsLoading(false)
     }
@@ -50,26 +58,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const supabase = createClient()
 
+    // Sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        loadUserData(session.user.id)
+        loadUserData({
+          id: session.user.id,
+          email: session.user.email,
+          user_metadata: session.user.user_metadata,
+        })
       } else {
         setIsLoading(false)
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          await loadUserData(session.user.id)
-        } else {
-          setUser(null)
-          setBaby(null)
-          setPlan('free')
-          setIsLoading(false)
-        }
+    // Escutar mudanças de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadUserData({
+          id: session.user.id,
+          email: session.user.email,
+          user_metadata: session.user.user_metadata,
+        })
+      } else {
+        setUser(null)
+        setBaby(null)
+        setPlan('free')
+        setIsLoading(false)
       }
-    )
+    })
 
     return () => subscription.unsubscribe()
   }, [loadUserData])
@@ -83,7 +99,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await signOut()
     } catch (err) {
-      console.error('Logout error:', err)
+      console.error('[AppContext] logout error:', err)
     } finally {
       setUser(null)
       setBaby(null)

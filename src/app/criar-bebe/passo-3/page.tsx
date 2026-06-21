@@ -6,19 +6,40 @@ import StatusBar from '@/components/ui/StatusBar'
 import Button from '@/components/ui/Button'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
+import { createBaby } from '@/lib/supabase/queries'
 
 export default function CriarBebeStep3() {
   const router = useRouter()
-  const { baby, setBaby } = useApp()
+  const { baby, setBaby, user } = useApp()
   const [about, setAbout] = useState('')
   const [hasPhoto, setHasPhoto] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleStart() {
+    if (!user?.id) return
     setLoading(true)
-    setBaby({ ...baby!, about })
-    await new Promise(r => setTimeout(r, 600))
-    router.push('/onboarding')
+    setError('')
+
+    try {
+      // Salvar bebê no Supabase
+      const saved = await createBaby({
+        user_id: user.id,
+        name: baby!.name,
+        gender: baby!.gender,
+        status: baby!.status,
+        due_date: baby!.due_date,
+        birth_date: baby!.birth_date,
+        week: baby!.week,
+        about: about.trim() || undefined,
+      })
+      setBaby(saved)
+      router.push('/onboarding')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.'
+      setError(msg)
+      setLoading(false)
+    }
   }
 
   return (
@@ -34,9 +55,7 @@ export default function CriarBebeStep3() {
           ))}
         </div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 4 }}>Foto e Apresentação</h1>
-        <p style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', fontFamily: 'var(--font-body)' }}>
-          Quase lá! Esses detalhes são opcionais.
-        </p>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', fontFamily: 'var(--font-body)' }}>Quase lá! Esses detalhes são opcionais.</p>
       </div>
 
       <div style={{ background: '#fff', borderRadius: '28px 28px 0 0', marginTop: -28, flex: 1, padding: '28px 20px 32px', display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto' }}>
@@ -48,23 +67,17 @@ export default function CriarBebeStep3() {
               width: 120, height: 120, borderRadius: '50%', border: 'none', cursor: 'pointer',
               background: hasPhoto ? 'var(--gradient-brand)' : 'var(--violet-50)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
-              outline: hasPhoto ? 'none' : '2.5px dashed var(--accent)',
-              outlineOffset: 3,
+              outline: hasPhoto ? 'none' : '2.5px dashed var(--accent)', outlineOffset: 3,
               fontSize: hasPhoto ? 48 : undefined,
             }}
           >
             {hasPhoto ? '👶' : <Icon name="camera" size={32} color="var(--accent)" />}
-            <div style={{
-              position: 'absolute', bottom: 4, right: 4, width: 28, height: 28,
-              borderRadius: '50%', background: 'var(--accent)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '2px solid #fff',
-            }}>
+            <div style={{ position: 'absolute', bottom: 4, right: 4, width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
               <Icon name="plus" size={14} color="#fff" strokeWidth={2.5} />
             </div>
           </button>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', textAlign: 'center' }}>
-            {hasPhoto ? 'Foto adicionada! Toque para mudar.' : 'Toque para adicionar uma foto (opcional)'}
+            {hasPhoto ? 'Toque para mudar a foto.' : 'Adicionar foto (opcional)'}
           </p>
         </div>
 
@@ -78,13 +91,13 @@ export default function CriarBebeStep3() {
             value={about}
             onChange={e => setAbout(e.target.value)}
             placeholder={`Conte um pouco sobre ${baby?.name || 'o bebê'}, o que vocês estão sentindo, os planos...`}
-            style={{
-              width: '100%', padding: '13px 14px', border: '1.5px solid var(--border-strong)',
-              borderRadius: 14, fontSize: 15, resize: 'none', fontFamily: 'var(--font-body)',
-              color: 'var(--text-strong)', background: '#fff',
-            }}
+            style={{ width: '100%', padding: '13px 14px', border: '1.5px solid var(--border-strong)', borderRadius: 14, fontSize: 15, resize: 'none', fontFamily: 'var(--font-body)', color: 'var(--text-strong)', background: '#fff' }}
           />
         </div>
+
+        {error && (
+          <p style={{ fontSize: 13, color: 'var(--danger)', fontFamily: 'var(--font-body)', textAlign: 'center' }}>{error}</p>
+        )}
 
         <div style={{ flex: 1 }} />
         <Button fullWidth onClick={handleStart} loading={loading} size="lg">

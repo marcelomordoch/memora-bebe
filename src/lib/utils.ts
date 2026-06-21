@@ -44,3 +44,36 @@ export function generateGiftCode(): string {
     Math.random().toString(36).substring(2, 6).toUpperCase()
   ).join('-')
 }
+
+/**
+ * Calcula a semana atual da gestação a partir da data prevista do parto.
+ * Uma gestação a termo tem 40 semanas.
+ * Se não houver due_date, usa o campo week manual.
+ */
+export function calculateCurrentWeek(baby: { due_date?: string; week?: number; status?: string }): number {
+  if (baby.status === 'nascido') return 40
+
+  if (baby.due_date) {
+    const now = new Date()
+    const due = new Date(baby.due_date)
+    const msPerWeek = 1000 * 60 * 60 * 24 * 7
+    const weeksUntilDue = (due.getTime() - now.getTime()) / msPerWeek
+    const currentWeek = Math.round(40 - weeksUntilDue)
+    return Math.max(1, Math.min(42, currentWeek))
+  }
+
+  return baby.week ?? 0
+}
+
+/**
+ * Calcula quantas semanas faltam para o parto.
+ */
+export function weeksUntilDue(baby: { due_date?: string; week?: number }): number {
+  if (baby.due_date) {
+    const now = new Date()
+    const due = new Date(baby.due_date)
+    const msPerWeek = 1000 * 60 * 60 * 24 * 7
+    return Math.max(0, Math.round((due.getTime() - now.getTime()) / msPerWeek))
+  }
+  return Math.max(0, 40 - (baby.week ?? 0))
+}
