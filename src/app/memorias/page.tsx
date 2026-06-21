@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { getMemories, toggleLike } from '@/lib/supabase/queries'
+import { getMemories, toggleLike, deleteMemory } from '@/lib/supabase/queries'
 import { formatDate, formatShortDate } from '@/lib/utils'
 import type { Memory } from '@/types'
 
@@ -24,13 +24,18 @@ function ImageViewer({
   memory,
   onClose,
   onToggleLike,
+  onDelete,
+  isOwner,
 }: {
   memory: Memory
   onClose: () => void
   onToggleLike: (id: string) => void
+  onDelete: (id: string) => void
+  isOwner: boolean
 }) {
   const liked = memory.liked_by_me
   const count = memory.likes_count
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
     <div
@@ -83,7 +88,31 @@ function ImageViewer({
         >
           <Icon name="x" size={20} color="#fff" strokeWidth={2.5} />
         </button>
+
+        {/* Botão excluir — só para o dono */}
+        {isOwner && (
+          <button
+            onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
+            style={{ position: 'absolute', top: 16, left: 16, width: 40, height: 40, borderRadius: '50%', background: 'rgba(197,107,107,.85)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
+            <Icon name="trash" size={18} color="#fff" strokeWidth={2} />
+          </button>
+        )}
       </div>
+
+      {/* Confirmação de exclusão */}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(18,17,26,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }} onClick={() => setConfirmDelete(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, padding: '28px 24px', width: '100%', maxWidth: 360, textAlign: 'center' }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--text-strong)', margin: '0 0 8px' }}>Excluir memória?</p>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: '0 0 20px' }}>Esta ação não pode ser desfeita.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid var(--border-subtle)', background: '#fff', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={() => { onDelete(memory.id); onClose() }} style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: 'var(--danger)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: '#fff', cursor: 'pointer' }}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom – white sheet */}
       <div
@@ -502,6 +531,13 @@ export default function MemoriasPage() {
           memory={selected}
           onClose={() => setSelected(null)}
           onToggleLike={handleToggleLike}
+          isOwner={selected.user_id === user?.id}
+          onDelete={async (id) => {
+            try {
+              await deleteMemory(id)
+              setAllMemories(prev => prev.filter(m => m.id !== id))
+            } catch (e) { console.error(e) }
+          }}
         />
       )}
     </>

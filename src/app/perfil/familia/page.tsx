@@ -8,6 +8,7 @@ import ScreenHeader from '@/components/ui/ScreenHeader'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
 import { getFamilyMembers, createFamilyInvite, unlockAchievement } from '@/lib/supabase/queries'
+import { createClient } from '@/lib/supabase/client'
 import type { FamilyMember } from '@/types'
 
 function getInitials(name: string) {
@@ -54,6 +55,23 @@ export default function FamiliaPage() {
     if (!baby?.id) return
     getFamilyMembers(baby.id).then(setMembers).catch(() => {}).finally(() => setLoading(false))
   }, [baby?.id])
+
+  async function handleDeleteMember(memberId: string) {
+    const supabase = createClient()
+    await supabase.from('family_members').delete().eq('id', memberId)
+    setMembers(prev => prev.filter(m => m.id !== memberId))
+  }
+
+  function getMemberInviteLink(member: FamilyMember) {
+    if (!member.invite_token || typeof window === 'undefined') return ''
+    return `${window.location.origin}/convite/${member.invite_token}`
+  }
+
+  async function handleCopyMemberLink(member: FamilyMember) {
+    const link = getMemberInviteLink(member)
+    if (!link) return
+    try { await navigator.clipboard.writeText(link); alert('Link copiado!') } catch {}
+  }
 
   async function handleInvite() {
     if (!baby?.id || !inviteName.trim()) return
@@ -151,15 +169,26 @@ export default function FamiliaPage() {
             <div style={{ width: 44, height: 44, borderRadius: 22, background: gradients[i % gradients.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, color: '#fff', flexShrink: 0 }}>
               {getInitials(member.name)}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 15, color: '#2E2C4A' }}>{member.name}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 15, color: '#2E2C4A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.name}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: member.status === 'accepted' ? '#E2F1EA' : '#FEF3C7', color: member.status === 'accepted' ? '#4F9E7C' : '#B45309' }}>
                   {member.status === 'accepted' ? 'Aceitou' : 'Pendente'}
                 </span>
               </div>
             </div>
-            <Icon name="heart" size={18} color="#F472B6" />
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              {/* Copiar link (só pendentes) */}
+              {member.status === 'pending' && member.invite_token && (
+                <button onClick={() => handleCopyMemberLink(member)} title="Copiar link do convite" style={{ width: 32, height: 32, borderRadius: 8, background: '#E7E1F4', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="link" size={15} color="#6B53AE" />
+                </button>
+              )}
+              {/* Excluir membro */}
+              <button onClick={() => { if(confirm(`Remover ${member.name} da família?`)) handleDeleteMember(member.id) }} title="Remover" style={{ width: 32, height: 32, borderRadius: 8, background: '#FCE7F3', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="trash" size={15} color="#C76FB0" />
+              </button>
+            </div>
           </div>
         ))}
       </div>

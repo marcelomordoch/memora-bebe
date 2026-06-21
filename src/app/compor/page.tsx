@@ -7,7 +7,7 @@ import StatusBar from '@/components/ui/StatusBar'
 import ScreenHeader from '@/components/ui/ScreenHeader'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { createMemory, uploadBabyPhoto } from '@/lib/supabase/queries'
+import { createMemory, uploadMemoryMedia } from '@/lib/supabase/queries'
 import { MEMORY_COLORS } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -205,18 +205,20 @@ export default function ComporPage() {
     setPhotoError('')
     setPhotoSubmitting(true)
     try {
-      // Upload photo to storage and get URL
-      const mediaUrl = await uploadBabyPhoto(baby.id, photoFile)
-      await createMemory({
+      const lifeStage = baby.status === 'gestacao' ? 'gestacao' : '0-1'
+      // 1. Criar a memória primeiro
+      const memory = await createMemory({
         baby_id: baby.id,
         user_id: user.id,
         type: 'foto',
         title: photoTitle.trim(),
         body: '',
-        life_stage: baby.status === 'gestacao' ? 'gestacao' : '0-1',
-        bg_color: MEMORY_COLORS[baby.status === 'gestacao' ? 'gestacao' : '0-1'],
+        life_stage: lifeStage,
+        bg_color: MEMORY_COLORS[lifeStage],
         week: baby.week,
       })
+      // 2. Upload da foto para o bucket 'memories' e vincular à memória
+      await uploadMemoryMedia(memory.id, photoFile, 'foto')
       setShowPhotoForm(false)
       setPhotoFile(null)
       setPhotoTitle('')

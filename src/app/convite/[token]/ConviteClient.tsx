@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
-import { acceptFamilyInvite } from '@/lib/supabase/queries'
 import StatusBar from '@/components/ui/StatusBar'
 
 interface InviteData {
@@ -71,7 +70,18 @@ export default function ConviteClient({ invite, token }: Props) {
     setAccepting(true)
     setError('')
     try {
-      await acceptFamilyInvite(token, user.id)
+      // Usa API route server-side com service role para ignorar RLS
+      const res = await fetch('/api/accept-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        setError(data.error || 'Erro ao aceitar o convite.')
+        setAccepting(false)
+        return
+      }
       setAccepted(true)
     } catch {
       setError('Erro ao aceitar o convite. Tente novamente.')
