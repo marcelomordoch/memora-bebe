@@ -190,11 +190,22 @@ export async function createFamilyInvite(babyId: string, name: string, email: st
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
   const token = crypto.randomUUID()
+  const payload: Record<string, unknown> = {
+    baby_id: babyId,
+    user_id: user.id,
+    name,
+    role,
+    status: 'pending',
+    invite_token: token,
+  }
+  // invited_email é opcional
+  if (email && email.trim()) payload.invited_email = email.trim()
   const { data, error } = await supabase
     .from('family_members')
-    .insert({ baby_id: babyId, user_id: user.id, invited_email: email, name, role, status: 'pending', invite_token: token })
-    .select().single()
-  if (error) throw error
+    .insert(payload)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
   return data
 }
 

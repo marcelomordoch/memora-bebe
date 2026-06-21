@@ -108,25 +108,11 @@ export default function PerfilPage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 20px 8px' }}>
         <div style={{ position: 'relative', marginBottom: 14 }}>
           {/* Avatar */}
-          <div
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
-              background: photoUrl ? undefined : 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)',
-              backgroundImage: photoUrl ? `url(${photoUrl})` : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 42,
-              border: '3px solid #fff',
-              boxShadow: '0 4px 20px rgba(107,83,174,0.35)',
-              overflow: 'hidden',
-            }}
-          >
-            {!photoUrl && '💜'}
+          <div style={{ width: 96, height: 96, borderRadius: 48, background: 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42, border: '3px solid #fff', boxShadow: '0 4px 20px rgba(107,83,174,0.35)', overflow: 'hidden', position: 'relative' }}>
+            {photoUrl
+              ? <img src={photoUrl} alt={baby?.name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={() => setPhotoUrl('')} />
+              : <span>💜</span>
+            }
           </div>
           {/* Camera badge */}
           <button

@@ -1,156 +1,143 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
+import AppShell from '@/components/layout/AppShell'
 import { useApp } from '@/contexts/AppContext'
 import { getAchievements } from '@/lib/supabase/queries'
 import type { Achievement } from '@/types'
 
 type Tab = 'todas' | 'alcancadas' | 'em-breve'
 
-function calcLevel(xp: number): { level: number; currentXp: number; nextXp: number } {
-  if (xp <= 100) return { level: 1, currentXp: xp, nextXp: 100 }
-  if (xp <= 300) return { level: 2, currentXp: xp - 100, nextXp: 200 }
-  if (xp <= 600) return { level: 3, currentXp: xp - 300, nextXp: 300 }
-  return { level: 4, currentXp: xp - 600, nextXp: 600 }
+const ACHIEVEMENT_ACTIONS: Record<string, { href: string; label: string }> = {
+  'primeira-memoria':  { href: '/compor/historia', label: 'Escrever primeira memória' },
+  'familia-conectada': { href: '/perfil/familia',  label: 'Convidar um familiar' },
+  'escritor':          { href: '/memorias',        label: 'Ver minhas memórias' },
+  'fotografo':         { href: '/compor',          label: 'Adicionar foto' },
+  'mensagem-tempo':    { href: '/perfil/mensagens', label: 'Criar mensagem para o futuro' },
+  'marco-mes':         { href: '/memorias',        label: 'Continue registrando' },
+}
+
+function levelFromXP(xp: number) {
+  if (xp >= 601) return { level: 4, label: 'Nível 4', progress: 100, detail: 'Nível máximo!' }
+  if (xp >= 301) return { level: 3, label: 'Nível 3', progress: Math.round(((xp-301)/300)*100), detail: `${xp}/600 XP` }
+  if (xp >= 101) return { level: 2, label: 'Nível 2', progress: Math.round(((xp-101)/200)*100), detail: `${xp}/300 XP` }
+  return           { level: 1, label: 'Nível 1', progress: Math.round((xp/100)*100), detail: `${xp}/100 XP` }
 }
 
 export default function ConquistasPage() {
+  const router = useRouter()
   const { baby } = useApp()
-  const [tab, setTab] = useState<Tab>('todas')
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<Tab>('todas')
 
   useEffect(() => {
-    if (!baby?.id) return
-    getAchievements(baby.id)
-      .then(setAchievements)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    if (!baby?.id) { setLoading(false); return }
+    getAchievements(baby.id).then(setAchievements).catch(console.error).finally(() => setLoading(false))
   }, [baby?.id])
 
-  const totalXP = achievements.filter((a) => a.unlocked).reduce((s, a) => s + (a.xp ?? 0), 0)
-  const { level, currentXp, nextXp } = calcLevel(totalXP)
+  const totalXP = achievements.filter(a => a.unlocked).reduce((s, a) => s + a.xp, 0)
+  const { label: levelLabel, progress, detail } = levelFromXP(totalXP)
 
-  const filtered = achievements.filter((a) => {
-    if (tab === 'todas') return true
-    if (tab === 'alcancadas') return a.unlocked
-    if (tab === 'em-breve') return !a.unlocked
-    return true
-  })
-
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'todas', label: 'Todas' },
-    { key: 'alcancadas', label: 'Alcançadas' },
-    { key: 'em-breve', label: 'Em breve' },
-  ]
+  const filtered = achievements.filter(a =>
+    tab === 'todas' ? true : tab === 'alcancadas' ? a.unlocked : !a.unlocked
+  )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F4F3F7', fontFamily: 'Inter, sans-serif', paddingBottom: 32 }}>
-      <StatusBar />
+    <AppShell>
+      <div style={{ background: 'var(--surface-page)', minHeight: '100dvh', paddingBottom: 32 }}>
+        <StatusBar />
+        <div style={{ padding: '8px 20px 0' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: 'var(--text-strong)', margin: 0 }}>Conquistas</h1>
+        </div>
 
-      {/* Header */}
-      <div style={{ padding: '16px 20px 8px' }}>
-        <h1 style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 26, color: '#2E2C4A', margin: 0 }}>
-          Conquistas
-        </h1>
-      </div>
+        <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* Level Card */}
-      <div style={{ margin: '0 20px 20px', background: 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)', borderRadius: 24, padding: '20px 24px', boxShadow: '0 4px 20px rgba(107,83,174,0.35)' }}>
-        {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0' }}>
-            <span style={{ width: 24, height: 24, border: '3px solid rgba(255,255,255,.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontSize: 48, lineHeight: 1 }}>🏅</span>
+          {/* Level card */}
+          <div style={{ background: 'var(--gradient-brand)', borderRadius: 24, padding: 20, boxShadow: 'var(--shadow-accent)', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ fontSize: 40 }}>🏅</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 22, color: '#fff', marginBottom: 2 }}>
-                Nível {level}
-              </div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 10 }}>
-                {currentXp} / {nextXp} XP {level < 4 ? 'para o próximo nível' : '(máximo!)'}
-              </div>
-              <div style={{ background: 'rgba(255,255,255,0.3)', borderRadius: 99, height: 8, overflow: 'hidden' }}>
-                <div style={{ background: '#fff', borderRadius: 99, height: '100%', width: `${Math.min(100, (currentXp / nextXp) * 100)}%`, transition: 'width 0.4s' }} />
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff', margin: 0 }}>{levelLabel}</p>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,.8)', margin: '2px 0 10px', fontFamily: 'var(--font-body)' }}>{detail}</p>
+              <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,.25)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${progress}%`, background: '#fff', borderRadius: 999, transition: 'width 360ms ease' }} />
               </div>
             </div>
+            <button onClick={() => router.push('/conquistas/arvore')} style={{ background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.3)', borderRadius: 12, padding: '8px 12px', color: '#fff', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              Árvore 🌳
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* Segmented Tabs */}
-      <div style={{ margin: '0 20px 16px', background: '#ECEAF2', borderRadius: 14, padding: 4, display: 'flex', gap: 2 }}>
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              flex: 1,
-              padding: '9px 0',
-              border: 'none',
-              borderRadius: 11,
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: tab === t.key ? 600 : 400,
-              fontSize: 13,
-              color: tab === t.key ? '#2E2C4A' : '#8B89B0',
-              background: tab === t.key ? '#fff' : 'transparent',
-              boxShadow: tab === t.key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Achievements List */}
-      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#8B89B0', fontSize: 14 }}>Carregando conquistas...</div>
-        )}
-        {!loading && filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#8B89B0', fontSize: 14 }}>Nenhuma conquista encontrada.</div>
-        )}
-        {filtered.map((achievement) => (
-          <div key={achievement.id} style={{ background: '#fff', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 20, background: achievement.unlocked ? '#E2F1EA' : '#ECEAF2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {achievement.unlocked
-                ? <Icon name="check" size={20} color="#4F9E7C" strokeWidth={2.5} />
-                : <Icon name="lock" size={18} color="#8B89B0" strokeWidth={2} />
-              }
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 15, color: '#2E2C4A', marginBottom: 2 }}>{achievement.title}</div>
-              <div style={{ fontSize: 13, color: '#8B89B0' }}>{achievement.description}</div>
-              <div style={{ fontSize: 12, color: '#6B53AE', fontWeight: 600, marginTop: 3 }}>+{achievement.xp} XP</div>
-            </div>
-            {!achievement.unlocked && <Icon name="chevron-right" size={18} color="#8B89B0" />}
+          {/* Tabs */}
+          <div style={{ background: 'var(--surface-sunken)', padding: 3, borderRadius: 999, display: 'flex' }}>
+            {(['todas','alcancadas','em-breve'] as Tab[]).map(v => (
+              <button key={v} onClick={() => setTab(v)} style={{ flex: 1, padding: '8px 0', borderRadius: 999, border: 'none', cursor: 'pointer', background: tab===v ? '#fff' : 'transparent', fontFamily: 'var(--font-body)', fontWeight: tab===v ? 600 : 400, fontSize: 13, color: tab===v ? 'var(--text-strong)' : 'var(--text-muted)', boxShadow: tab===v ? 'var(--shadow-sm)' : 'none', transition: 'all 140ms' }}>
+                {v === 'todas' ? 'Todas' : v === 'alcancadas' ? 'Alcançadas' : 'Em breve'}
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Árvore da Vida CTA */}
-      <div style={{ padding: '20px 20px 32px' }}>
-        <Link href="/conquistas/arvore" style={{ textDecoration: 'none' }}>
-          <div style={{ background: '#fff', border: '1.5px solid #E7E5F0', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: '#E7E1F4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name="leaf" size={20} color="#6B53AE" />
+          {/* Achievement list */}
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+              <span style={{ width: 32, height: 32, border: '3px solid var(--border-subtle)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 15, color: '#2E2C4A' }}>Árvore da Vida</div>
-              <div style={{ fontSize: 13, color: '#8B89B0' }}>Veja seu progresso visual</div>
-            </div>
-            <Icon name="chevron-right" size={18} color="#8B89B0" />
-          </div>
-        </Link>
-      </div>
+          ) : filtered.length === 0 ? (
+            <p style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>
+              {tab === 'alcancadas' ? 'Nenhuma conquista desbloqueada ainda.' : 'Todas conquistadas! 🎉'}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {filtered.map(a => {
+                const action = ACHIEVEMENT_ACTIONS[a.id]
+                const clickable = !a.unlocked && !!action
+                return (
+                  <div
+                    key={a.id}
+                    onClick={() => clickable && router.push(action.href)}
+                    style={{
+                      background: '#fff', borderRadius: 14, padding: '14px 16px',
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      boxShadow: 'var(--shadow-sm)', cursor: clickable ? 'pointer' : 'default',
+                      border: a.unlocked ? '1.5px solid var(--success-soft)' : '1.5px solid var(--border-subtle)',
+                      transition: 'opacity 120ms',
+                    }}
+                  >
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: a.unlocked ? 'var(--success-soft)' : 'var(--surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon name={a.unlocked ? 'check' : 'lock'} size={20} color={a.unlocked ? 'var(--success)' : 'var(--text-muted)'} strokeWidth={2.5} />
+                    </div>
 
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)', margin: 0 }}>{a.title}</p>
+                      <p style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: '2px 0 0', lineHeight: 1.4 }}>{a.description}</p>
+                      {a.unlocked && a.unlocked_at ? (
+                        <p style={{ fontSize: 11, color: 'var(--success)', fontFamily: 'var(--font-body)', margin: '4px 0 0', fontWeight: 600 }}>
+                          ✓ Desbloqueada em {new Date(a.unlocked_at).toLocaleDateString('pt-BR')} · +{a.xp} XP
+                        </p>
+                      ) : action ? (
+                        <p style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'var(--font-body)', margin: '4px 0 0', fontWeight: 600 }}>
+                          → {action.label}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: a.unlocked ? 'var(--success)' : 'var(--text-muted)', background: a.unlocked ? 'var(--success-soft)' : 'var(--surface-sunken)', padding: '3px 8px', borderRadius: 999 }}>
+                        +{a.xp} XP
+                      </span>
+                      {clickable && <Icon name="chevron-right" size={16} color="var(--text-muted)" />}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+    </AppShell>
   )
 }

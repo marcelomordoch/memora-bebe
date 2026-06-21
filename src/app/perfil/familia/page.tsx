@@ -48,6 +48,7 @@ export default function FamiliaPage() {
   // Link/QR modal
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [modalLink, setModalLink] = useState('')
+  const [inviteError, setInviteError] = useState('')
 
   useEffect(() => {
     if (!baby?.id) return
@@ -57,13 +58,16 @@ export default function FamiliaPage() {
   async function handleInvite() {
     if (!baby?.id || !inviteName.trim()) return
     setInviting(true)
+    setInviteError('')
     try {
       const member = await createFamilyInvite(baby.id, inviteName.trim(), inviteEmail.trim(), inviteRole)
-      setInviteToken(member.invite_token ?? null)
-      // refresh list
+      const token = member.invite_token ?? null
+      setInviteToken(token)
       getFamilyMembers(baby.id).then(setMembers).catch(() => {})
-    } catch (err) {
-      console.error(err)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao gerar convite'
+      setInviteError(msg)
+      console.error('[invite]', err)
     } finally {
       setInviting(false)
     }
@@ -195,6 +199,11 @@ export default function FamiliaPage() {
                     {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
+                {inviteError && (
+                  <div style={{ background: '#FCE7F3', borderRadius: 10, padding: '10px 14px' }}>
+                    <p style={{ fontSize: 13, color: '#C76FB0', margin: 0, fontFamily: 'Inter, sans-serif' }}>{inviteError}</p>
+                  </div>
+                )}
                 <button
                   onClick={handleInvite}
                   disabled={inviting || !inviteName.trim()}
