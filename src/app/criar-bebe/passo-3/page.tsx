@@ -6,7 +6,7 @@ import StatusBar from '@/components/ui/StatusBar'
 import Button from '@/components/ui/Button'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { createBaby } from '@/lib/supabase/queries'
+import { createBaby, ensureProfile } from '@/lib/supabase/queries'
 
 export default function CriarBebeStep3() {
   const router = useRouter()
@@ -22,6 +22,9 @@ export default function CriarBebeStep3() {
     setError('')
 
     try {
+      // Garantir que o perfil existe antes de inserir o bebê (FK constraint)
+      await ensureProfile(user.id, user.email, user.name)
+
       // Salvar bebê no Supabase — não passar id (Supabase gera automaticamente)
       const payload: Record<string, unknown> = {
         user_id: user.id,

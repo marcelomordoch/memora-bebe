@@ -60,7 +60,26 @@ export async function signUpWithEmail(email: string, password: string, name: str
     options: { data: { name } },
   })
   if (error) throw error
+
+  // Garantir que o perfil existe imediatamente (não depender só do trigger)
+  if (data.user) {
+    await supabase.from('profiles').upsert(
+      { id: data.user.id, name, email, plan: 'free' },
+      { onConflict: 'id', ignoreDuplicates: true }
+    )
+  }
+
   return data
+}
+
+// Garante que o perfil do usuário existe — chame antes de operações que dependem dele
+export async function ensureProfile(userId: string, email: string, name: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase.from('profiles').upsert(
+    { id: userId, name: name || email.split('@')[0], email, plan: 'free' },
+    { onConflict: 'id', ignoreDuplicates: true }
+  )
+  if (error) console.warn('[ensureProfile]', error.message)
 }
 
 export async function signOut() {

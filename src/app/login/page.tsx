@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import StatusBar from '@/components/ui/StatusBar'
 import { useApp } from '@/contexts/AppContext'
-import { signInWithEmail, signInWithGoogle, getBaby, getUser } from '@/lib/supabase/queries'
+import { signInWithEmail, signInWithGoogle, getBaby, getUser, ensureProfile } from '@/lib/supabase/queries'
 
 // Map Supabase English error messages to Portuguese
 function translateError(msg: string): string {
@@ -48,6 +48,13 @@ export default function LoginPage() {
       const data = await signInWithEmail(email, password)
       const authUser = data.user
       if (!authUser) throw new Error('Usuário não encontrado.')
+
+      // Garantir que o perfil existe (cria se não existir)
+      await ensureProfile(
+        authUser.id,
+        authUser.email ?? email,
+        authUser.user_metadata?.name ?? email.split('@')[0]
+      )
 
       // Fetch profile and baby
       const profile = await getUser(authUser.id)
