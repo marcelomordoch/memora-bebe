@@ -1,147 +1,70 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import StatusBar from '@/components/ui/StatusBar';
-import ScreenHeader from '@/components/ui/ScreenHeader';
-import AppShell from '@/components/layout/AppShell';
-import { useApp } from '@/contexts/AppContext';
-import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation'
+import StatusBar from '@/components/ui/StatusBar'
+import ScreenHeader from '@/components/ui/ScreenHeader'
+import AppShell from '@/components/layout/AppShell'
+import Icon from '@/components/ui/Icon'
 
 const PARTNERS = [
-  { name: 'Natura',    emoji: '🌿', bg: '#D4EDDA' },
-  { name: 'Riachuelo', emoji: '👕', bg: '#D0E4F5' },
-  { name: 'Renner',    emoji: '🛍', bg: '#FADBD8' },
-  { name: 'Amazon',    emoji: '📦', bg: '#FDEBD0' },
-];
+  { name: 'Natura',    emoji: '🌿', bg: '#D4EDDA', color: '#1A7A3B' },
+  { name: 'Riachuelo', emoji: '👕', bg: '#D0E4F5', color: '#1A4E7A' },
+  { name: 'Renner',    emoji: '🛍', bg: '#FADBD8', color: '#7A1A1A' },
+  { name: 'Amazon',    emoji: '📦', bg: '#FDEBD0', color: '#7A4A1A' },
+]
 
 export default function LojaPage() {
-  const { user } = useApp();
-  const [credits, setCredits] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    const supabase = createClient();
-    supabase
-      .from('profiles')
-      .select('credits')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (data) setCredits(data.credits ?? 0);
-      });
-  }, [user]);
-
-  const formatBalance = (n: number) =>
-    `R$ ${n.toFixed(2).replace('.', ',')}`;
+  const router = useRouter()
 
   return (
     <AppShell>
-      <div style={{ background: '#F4F3F7', minHeight: '100vh' }}>
+      <div style={{ background: 'var(--surface-page)', minHeight: '100dvh', paddingBottom: 32 }}>
         <StatusBar />
-        <ScreenHeader title="Loja" />
+        <ScreenHeader title="Loja" onBack={() => router.back()} />
 
-        <div style={{ padding: '0 16px 32px' }}>
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* ── Balance card ── */}
-          <div style={{
-            background: 'var(--surface-card)',
-            borderRadius: 24,
-            boxShadow: 'var(--shadow-md)',
-            padding: 20,
-            marginBottom: 24,
-          }}>
-            <p style={{ fontSize: 13, color: '#8B89B0', margin: '0 0 4px', fontFamily: 'Inter,sans-serif' }}>
-              Seu saldo
+          {/* Em breve */}
+          <div style={{ background: 'var(--gradient-brand)', borderRadius: 18, padding: '20px', boxShadow: 'var(--shadow-accent)' }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff', margin: '0 0 6px' }}>
+              Loja em breve 🎁
             </p>
-            <p style={{
-              fontFamily: 'Poppins,sans-serif',
-              fontWeight: 800,
-              fontSize: 34,
-              color: '#2E2C4A',
-              margin: '0 0 10px',
-            }}>
-              {credits === null ? '—' : formatBalance(credits)}
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', fontFamily: 'var(--font-body)', margin: 0, lineHeight: 1.5 }}>
+              Em breve você poderá comprar presentes para mamães e bebês, além de gift cards especiais.
             </p>
-            <Link
-              href="/perfil/loja/gift-cards/resgatar"
-              style={{
-                fontSize: 13,
-                color: '#6B53AE',
-                textDecoration: 'none',
-                fontFamily: 'Inter,sans-serif',
-                fontWeight: 500,
-              }}
-            >
-              Resgatar gift card →
-            </Link>
           </div>
 
-          {/* ── Parceiros ── */}
-          <h2 style={{
-            fontFamily: 'Poppins,sans-serif',
-            fontWeight: 700,
-            fontSize: 17,
-            color: '#2E2C4A',
-            margin: '0 0 12px',
-          }}>
-            Parceiros
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-            {PARTNERS.map((p) => (
-              <div
-                key={p.name}
-                style={{
-                  background: 'var(--surface-card)',
-                  borderRadius: 16,
-                  boxShadow: 'var(--shadow-sm)',
-                  padding: '16px 14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  cursor: 'pointer',
-                  opacity: 0.85,
-                }}
-                title="Em breve"
-              >
-                <div style={{
-                  width: 38, height: 38, borderRadius: 8,
-                  background: p.bg,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20, flexShrink: 0,
-                }}>
-                  {p.emoji}
+          {/* Parceiros */}
+          <div>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)', margin: '0 0 12px' }}>
+              Parceiros em destaque
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {PARTNERS.map(p => (
+                <div key={p.name} style={{ background: '#fff', borderRadius: 14, padding: '16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 10, background: p.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                    {p.emoji}
+                  </div>
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--text-strong)', margin: 0 }}>{p.name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: '2px 0 0' }}>Em breve</p>
+                  </div>
                 </div>
-                <div>
-                  <span style={{ fontFamily: 'Inter,sans-serif', fontWeight: 600, fontSize: 14, color: '#2E2C4A', display: 'block' }}>
-                    {p.name}
-                  </span>
-                  <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#8B89B0' }}>
-                    Em breve
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* ── CTA Gift Cards ── */}
-          <Link href="/perfil/loja/gift-cards" style={{ textDecoration: 'none' }}>
-            <div style={{
-              background: 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)',
-              borderRadius: 18,
-              padding: 20,
-              cursor: 'pointer',
-            }}>
-              <p style={{ fontFamily: 'Poppins,sans-serif', fontWeight: 700, fontSize: 20, color: '#fff', margin: '0 0 6px' }}>
-                Ofertas exclusivas para mamães! 🎁
-              </p>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', margin: 0, fontFamily: 'Inter,sans-serif' }}>
-                Presenteie quem você ama com um gift card
-              </p>
+              ))}
             </div>
-          </Link>
+          </div>
+
+          {/* Upgrade Premium */}
+          <div style={{ background: '#fff', borderRadius: 18, padding: '16px 18px', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }} onClick={() => router.push('/planos')}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--violet-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>👑</div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)', margin: 0 }}>Plano Premium</p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: '2px 0 0' }}>Fotos, vídeos e áudio ilimitados</p>
+            </div>
+            <Icon name="chevron-right" size={18} color="var(--text-muted)" />
+          </div>
         </div>
       </div>
     </AppShell>
-  );
+  )
 }

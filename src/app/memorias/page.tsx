@@ -37,6 +37,11 @@ function ImageViewer({
   const count = memory.likes_count
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // Navegação de múltiplas fotos
+  const allUrls = memory.media_urls?.length ? memory.media_urls : memory.media_url ? [memory.media_url] : []
+  const [photoIndex, setPhotoIndex] = useState(0)
+  const currentUrl = allUrls[photoIndex] || null
+
   return (
     <div
       style={{
@@ -63,10 +68,28 @@ function ImageViewer({
         }}
         onClick={e => e.stopPropagation()}
       >
-        {memory.media_url
-          ? <img src={memory.media_url} alt={memory.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+        {currentUrl
+          ? <img src={currentUrl} alt={memory.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
           : <span style={{ fontSize: 88 }}>{memory.emoji || '💜'}</span>
         }
+
+        {/* Setas de navegação (múltiplas fotos) */}
+        {allUrls.length > 1 && (
+          <>
+            <button onClick={e => { e.stopPropagation(); setPhotoIndex(i => Math.max(0, i - 1)) }} disabled={photoIndex === 0} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: photoIndex === 0 ? 0.3 : 1 }}>
+              <Icon name="chevron-left" size={20} color="#fff" strokeWidth={2.5} />
+            </button>
+            <button onClick={e => { e.stopPropagation(); setPhotoIndex(i => Math.min(allUrls.length - 1, i + 1)) }} disabled={photoIndex === allUrls.length - 1} style={{ position: 'absolute', right: 52, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: photoIndex === allUrls.length - 1 ? 0.3 : 1 }}>
+              <Icon name="chevron-right" size={20} color="#fff" strokeWidth={2.5} />
+            </button>
+            {/* Dots indicator */}
+            <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
+              {allUrls.map((_, i) => (
+                <div key={i} onClick={e => { e.stopPropagation(); setPhotoIndex(i) }} style={{ width: i === photoIndex ? 16 : 6, height: 6, borderRadius: 999, background: '#fff', opacity: i === photoIndex ? 1 : 0.5, cursor: 'pointer', transition: 'width 200ms' }} />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Close button */}
         <button
