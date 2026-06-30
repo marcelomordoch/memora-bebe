@@ -89,24 +89,58 @@ export default function AudioPage() {
   }
 
   function handlePause() {
-    isFinalStopRef.current = false
-    mediaRecorderRef.current?.stop()
-    stopTimer()
-    setRecState('paused')
+    try {
+      isFinalStopRef.current = false
+      const mr = mediaRecorderRef.current
+      if (mr && mr.state === 'recording') {
+        mr.stop()
+      }
+      stopTimer()
+      setRecState('paused')
+    } catch (err) {
+      console.error('[audio] erro ao pausar:', err)
+      setError('Erro ao pausar a gravação. Tente finalizar e gravar novamente.')
+    }
   }
 
   function handleResume() {
-    if (!streamRef.current) return
-    isFinalStopRef.current = false
-    startSegment(streamRef.current)
-    startTimer()
-    setRecState('recording')
+    try {
+      if (!streamRef.current) {
+        setError('Conexão com o microfone perdida. Grave novamente.')
+        setRecState('idle')
+        return
+      }
+      isFinalStopRef.current = false
+      startSegment(streamRef.current)
+      startTimer()
+      setRecState('recording')
+    } catch (err) {
+      console.error('[audio] erro ao continuar:', err)
+      setError('Erro ao continuar a gravação. Tente finalizar e gravar novamente.')
+    }
   }
 
   function handleStop() {
-    isFinalStopRef.current = true
-    stopTimer()
-    mediaRecorderRef.current?.stop()
+    try {
+      isFinalStopRef.current = true
+      stopTimer()
+      const mr = mediaRecorderRef.current
+      if (mr && mr.state !== 'inactive') {
+        mr.stop()
+      } else if (chunksRef.current.length > 0) {
+        // Gravador já parado (ex: veio de uma pausa) — finaliza manualmente com os dados acumulados
+        const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current })
+        const url = URL.createObjectURL(blob)
+        setAudioBlob(blob)
+        setAudioUrl(url)
+        setRecState('done')
+        streamRef.current?.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+      }
+    } catch (err) {
+      console.error('[audio] erro ao finalizar:', err)
+      setError('Erro ao finalizar a gravação.')
+    }
   }
 
   function handleMainButton() {
@@ -210,6 +244,7 @@ export default function AudioPage() {
                 <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: 'rgba(197,107,107,.15)', animation: 'pulse 1.5s ease-in-out infinite' }} />
               )}
               <button
+                type="button"
                 onClick={handleMainButton}
                 style={{
                   width: recState === 'idle' ? 140 : 120, height: recState === 'idle' ? 140 : 120, borderRadius: '50%',
@@ -221,16 +256,16 @@ export default function AudioPage() {
                 }}
               >
                 <Icon name={recState === 'recording' ? 'pause' : 'mic'} size={recState === 'idle' ? 48 : 36} color="#fff" strokeWidth={1.5} />
-                <span style={{ fontSize: 13, color: 'rgba(255,255,255,.9)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-                  {recState === 'idle' && 'Gravar'}
-                  {recState === 'recording' && 'Pausar'}
-                  {recState === 'paused' && 'Continuar'}
-                </span>
+                {recState === 'idle' && (
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,.9)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                    Gravar
+                  </span>
+                )}
               </button>
             </div>
 
             {isRecordingOrPaused && (
-              <button onClick={handleStop} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-sunken)', border: 'none', borderRadius: 999, padding: '10px 20px', cursor: 'pointer' }}>
+              <button type="button" onClick={handleStop} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-sunken)', border: 'none', borderRadius: 999, padding: '10px 20px', cursor: 'pointer' }}>
                 <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--text-strong)' }} />
                 <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--text-strong)' }}>Finalizar gravação</span>
               </button>
@@ -252,10 +287,10 @@ export default function AudioPage() {
             <audio ref={audioRef} src={audioUrl} onEnded={() => setPlaying(false)} style={{ display: 'none' }} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-              <button onClick={handleDiscard} style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--rose-100)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button type="button" onClick={handleDiscard} style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--rose-100)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon name="trash" size={22} color="var(--rose-500)" />
               </button>
-              <button onClick={togglePlay} style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--gradient-brand)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-accent)' }}>
+              <button type="button" onClick={togglePlay} style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--gradient-brand)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-accent)' }}>
                 <Icon name={playing ? 'pause' : 'play'} size={36} color="#fff" strokeWidth={1.5} />
               </button>
               <div style={{ width: 52 }} />

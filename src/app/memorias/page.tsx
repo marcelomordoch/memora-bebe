@@ -72,6 +72,8 @@ function ImageViewer({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,.18)' }}>
             <Icon name="mic" size={56} color="#fff" strokeWidth={1.5} />
           </div>
+        ) : memory.type === 'video' && currentUrl ? (
+          <video src={currentUrl} controls playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
         ) : currentUrl ? (
           <img src={currentUrl} alt={memory.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
         ) : (
@@ -290,13 +292,22 @@ function MemoryCard({
       {memory.media_url && memory.type !== 'audio' ? (
         /* ── Layout vertical quando tem foto ── */
         <>
-          {/* Foto por inteira, sem corte */}
-          <div style={{ width: '100%', background: memory.bg_color || '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, maxHeight: 320, overflow: 'hidden' }}>
-            <img
-              src={memory.media_url}
-              alt={memory.title}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', maxHeight: 320 }}
-            />
+          {/* Foto ou vídeo por inteiro, sem corte */}
+          <div style={{ width: '100%', background: memory.bg_color || '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, maxHeight: 320, overflow: 'hidden', position: 'relative' }}>
+            {memory.type === 'video' ? (
+              <>
+                <video src={memory.media_url} muted playsInline preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', maxHeight: 320 }} />
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                  <Icon name="play" size={26} color="#fff" strokeWidth={1.5} />
+                </div>
+              </>
+            ) : (
+              <img
+                src={memory.media_url}
+                alt={memory.title}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', maxHeight: 320 }}
+              />
+            )}
           </div>
           {/* Texto abaixo — 3 linhas + scroll */}
           <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4, position: 'relative' }}>

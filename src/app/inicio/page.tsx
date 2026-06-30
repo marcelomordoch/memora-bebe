@@ -242,6 +242,8 @@ export default function DashboardPage() {
                 <div style={{ width: 100, background: recentMemory.bg_color || 'var(--gradient-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
                   {recentMemory.type === 'audio' ? (
                     <Icon name="mic" size={32} color="#fff" strokeWidth={1.5} />
+                  ) : recentMemory.type === 'video' ? (
+                    <Icon name="video" size={32} color="#fff" strokeWidth={1.5} />
                   ) : recentMemory.media_url ? (
                     <img src={recentMemory.media_url} alt={recentMemory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'absolute', inset: 0 }} />
                   ) : (
