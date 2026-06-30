@@ -296,7 +296,14 @@ function MemoryCard({
           <div style={{ width: '100%', background: memory.bg_color || '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, maxHeight: 320, overflow: 'hidden', position: 'relative' }}>
             {memory.type === 'video' ? (
               <>
-                <video src={memory.media_url} muted playsInline preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', maxHeight: 320 }} />
+                <video
+                  src={memory.media_url ? `${memory.media_url}#t=0.1` : undefined}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  onLoadedMetadata={e => { try { e.currentTarget.currentTime = 0.1 } catch {} }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', maxHeight: 320, background: '#000' }}
+                />
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                   <Icon name="play" size={26} color="#fff" strokeWidth={1.5} />
                 </div>
