@@ -43,19 +43,7 @@ export default function DashboardPage() {
     <div style={{ background: '#fff', paddingBottom: 0 }}>
       <StatusBar />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'var(--gradient-brand)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-          }}>💜</div>
-          <div style={{ lineHeight: 1.2 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--text-strong)' }}>memora</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'var(--text-muted)' }}>bebê</span>
-            </div>
-          </div>
-        </div>
+        <img src="/logo-full.png" alt="Memora Bebê" style={{ height: 44, width: 'auto' }} />
         <Link href="/notificacoes" style={{ position: 'relative', textDecoration: 'none', display: 'flex' }}>
           <Icon name="bell" size={22} color="var(--text-strong)" />
           <div style={{ position: 'absolute', top: -2, right: -2, width: 8, height: 8, borderRadius: '50%', background: '#E05050', border: '1.5px solid white' }} />

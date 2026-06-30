@@ -57,13 +57,13 @@ function ImageViewer({
       {/* Top – imagem ou hero colorido */}
       <div
         style={{
-          height: '56%',
+          flex: 1,
+          minHeight: '28%',
           background: memory.bg_color || 'var(--gradient-brand)',
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexShrink: 0,
           overflow: 'hidden',
         }}
         onClick={e => e.stopPropagation()}
@@ -144,10 +144,11 @@ function ImageViewer({
         </div>
       )}
 
-      {/* Bottom – white sheet */}
+      {/* Bottom – white sheet: auto-sizes to content, scrolls when long */}
       <div
         style={{
-          flex: 1,
+          flexShrink: 0,
+          maxHeight: '72%',
           background: '#fff',
           borderRadius: '24px 24px 0 0',
           padding: '12px 24px 32px',
@@ -193,7 +194,6 @@ function ImageViewer({
             lineHeight: 1.6,
             color: 'var(--text-body)',
             margin: 0,
-            flex: 1,
           }}
         >
           {memory.body}

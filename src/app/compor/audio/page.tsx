@@ -7,7 +7,7 @@ import ScreenHeader from '@/components/ui/ScreenHeader'
 import Button from '@/components/ui/Button'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { createMemory, unlockAchievement } from '@/lib/supabase/queries'
+import { createMemory, unlockAchievement, getMemories } from '@/lib/supabase/queries'
 import { uploadToR2 } from '@/lib/r2/upload'
 import { MEMORY_COLORS } from '@/lib/utils'
 
@@ -191,6 +191,8 @@ export default function AudioPage() {
         emoji: '🎙️',
         week: baby.week,
       })
+      const allMems = await getMemories(baby.id)
+      if (allMems.length === 1) unlockAchievement(baby.id, user.id, 'primeira-memoria', 50).catch(() => {})
       unlockAchievement(baby.id, user.id, 'narrador', 100).catch(() => {})
       router.push('/memorias')
     } catch (err: unknown) {

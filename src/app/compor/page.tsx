@@ -115,9 +115,10 @@ function MediaForm({
         week: baby.week,
       } as Parameters<typeof createMemory>[0])
 
-      // Conquista fotógrafo
+      // Conquistas
+      const allMems = await getMemories(baby.id)
+      if (allMems.length === 1) unlockAchievement(baby.id, user.id, 'primeira-memoria', 50).catch(() => {})
       if (isPhoto) {
-        const allMems = await getMemories(baby.id)
         const photoCount = allMems.filter(m => m.type === 'foto').length
         if (photoCount >= 5) unlockAchievement(baby.id, user.id, 'fotografo', 150).catch(() => {})
       }
