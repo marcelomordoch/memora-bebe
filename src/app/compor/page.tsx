@@ -61,8 +61,19 @@ function MediaForm({
   const accept = isPhoto ? 'image/*' : 'video/*'
   const multiple = isPhoto
 
+  const MAX_FILE_SIZE = 45 * 1024 * 1024 // 45MB (limite do plano gratuito Supabase é 50MB)
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? [])
+    const tooBig = selected.filter(f => f.size > MAX_FILE_SIZE)
+    if (tooBig.length > 0) {
+      setError(`${tooBig.length === 1 ? 'Um arquivo é' : `${tooBig.length} arquivos são`} maior${tooBig.length === 1 ? '' : 'es'} que 45MB. ${isPhoto ? 'Escolha fotos menores.' : 'Grave um vídeo mais curto ou reduza a qualidade nas configurações da câmera.'}`)
+      const valid = selected.filter(f => f.size <= MAX_FILE_SIZE)
+      setFiles(valid)
+      setPreviews(valid.map(f => URL.createObjectURL(f)))
+      return
+    }
+    setError('')
     setFiles(selected)
     setPreviews(selected.map(f => URL.createObjectURL(f)))
   }
@@ -82,7 +93,12 @@ function MediaForm({
       const urls = await Promise.all(
         files.map(async f => {
           const path = generateFilePath(user.id, f.name)
-          return uploadFile(bucket, path, f)
+          try {
+            return await uploadFile(bucket, path, f)
+          } catch (uploadErr: unknown) {
+            const msg = uploadErr instanceof Error ? uploadErr.message : 'Erro desconhecido'
+            throw new Error(`Falha no upload de "${f.name}": ${msg}`)
+          }
         })
       )
 
@@ -109,9 +125,10 @@ function MediaForm({
 
       previews.forEach(p => URL.revokeObjectURL(p))
       onSaved()
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err)
-      setError('Erro ao salvar. Tente novamente.')
+      const msg = err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.'
+      setError(msg)
       setSubmitting(false)
     }
   }
@@ -145,7 +162,9 @@ function MediaForm({
             <span style={{ fontSize: 14, color: 'var(--accent)', fontFamily: 'var(--font-body)', fontWeight: 600 }}>
               {isPhoto ? 'Selecionar fotos' : 'Selecionar vídeo'}
             </span>
-            {isPhoto && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>Você pode selecionar várias</span>}
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>
+              {isPhoto ? 'Você pode selecionar várias · até 45MB cada' : 'Vídeos curtos · até 45MB'}
+            </span>
           </button>
         )}
 

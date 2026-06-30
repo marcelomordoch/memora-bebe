@@ -240,10 +240,13 @@ export default function DashboardPage() {
             <Link href="/memorias" style={{ textDecoration: 'none' }}>
               <div style={{ background: '#fff', borderRadius: 18, border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)', display: 'flex', overflow: 'hidden' }}>
                 <div style={{ width: 100, background: recentMemory.bg_color || 'var(--gradient-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
-                  {recentMemory.media_url
-                    ? <img src={recentMemory.media_url} alt={recentMemory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'absolute', inset: 0 }} />
-                    : <span>{recentMemory.emoji || '💜'}</span>
-                  }
+                  {recentMemory.type === 'audio' ? (
+                    <Icon name="mic" size={32} color="#fff" strokeWidth={1.5} />
+                  ) : recentMemory.media_url ? (
+                    <img src={recentMemory.media_url} alt={recentMemory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'absolute', inset: 0 }} />
+                  ) : (
+                    <span>{recentMemory.emoji || '💜'}</span>
+                  )}
                 </div>
                 <div style={{ padding: '14px 14px', flex: 1, minWidth: 0 }}>
                   <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: 'var(--text-strong)', marginBottom: 4 }}>{recentMemory.title}</p>

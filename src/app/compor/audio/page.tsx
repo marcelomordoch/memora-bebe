@@ -29,6 +29,8 @@ export default function AudioPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
+  const isFinalStopRef = useRef(false)
+  const mimeTypeRef = useRef('audio/webm')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -47,25 +49,37 @@ export default function AudioPage() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
   }
 
-  async function handleStart() {
-    setError('')
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg'
-      const mr = new MediaRecorder(stream, { mimeType })
-      chunksRef.current = []
-      mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      mr.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mr.mimeType })
+  // Inicia um "segmento" de gravação na stream já existente.
+  // Usamos start/stop por segmento (em vez de pause()/resume() nativos do MediaRecorder,
+  // que têm suporte inconsistente em navegadores mobile) para garantir pausar/retomar confiável.
+  function startSegment(stream: MediaStream) {
+    const mr = new MediaRecorder(stream, { mimeType: mimeTypeRef.current })
+    mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+    mr.onstop = () => {
+      if (isFinalStopRef.current) {
+        const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current })
         const url = URL.createObjectURL(blob)
         setAudioBlob(blob)
         setAudioUrl(url)
         setRecState('done')
         streamRef.current?.getTracks().forEach(t => t.stop())
+        streamRef.current = null
       }
-      mr.start(100)
-      mediaRecorderRef.current = mr
+      // Se não for parada final (foi pausa), não faz nada — handleResume cria novo segmento
+    }
+    mr.start(100)
+    mediaRecorderRef.current = mr
+  }
+
+  async function handleStart() {
+    setError('')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      mimeTypeRef.current = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg'
+      chunksRef.current = []
+      isFinalStopRef.current = false
+      startSegment(stream)
       setSeconds(0)
       startTimer()
       setRecState('recording')
@@ -75,18 +89,22 @@ export default function AudioPage() {
   }
 
   function handlePause() {
-    mediaRecorderRef.current?.pause()
+    isFinalStopRef.current = false
+    mediaRecorderRef.current?.stop()
     stopTimer()
     setRecState('paused')
   }
 
   function handleResume() {
-    mediaRecorderRef.current?.resume()
+    if (!streamRef.current) return
+    isFinalStopRef.current = false
+    startSegment(streamRef.current)
     startTimer()
     setRecState('recording')
   }
 
   function handleStop() {
+    isFinalStopRef.current = true
     stopTimer()
     mediaRecorderRef.current?.stop()
   }
@@ -106,6 +124,7 @@ export default function AudioPage() {
   function handleDiscard() {
     if (audioUrl) URL.revokeObjectURL(audioUrl)
     streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
     stopTimer()
     setAudioUrl(null)
     setAudioBlob(null)
@@ -141,9 +160,10 @@ export default function AudioPage() {
       })
       unlockAchievement(baby.id, user.id, 'narrador', 100).catch(() => {})
       router.push('/memorias')
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err)
-      setError('Erro ao salvar. Tente novamente.')
+      const msg = err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.'
+      setError(msg)
       setSaving(false)
     }
   }
@@ -180,14 +200,12 @@ export default function AudioPage() {
 
         {recState !== 'done' && (
           <>
-            {/* Timer */}
             {isRecordingOrPaused && (
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, color: recState === 'recording' ? 'var(--danger)' : 'var(--text-muted)', margin: 0 }}>
                 {formatTime(seconds)}
               </p>
             )}
 
-            {/* Main record/pause/resume button */}
             <div style={{ position: 'relative', width: 140, height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {recState === 'recording' && (
                 <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: 'rgba(197,107,107,.15)', animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -203,7 +221,7 @@ export default function AudioPage() {
                   transition: 'all 200ms ease',
                 }}
               >
-                <Icon name={recState === 'recording' ? 'pause' : recState === 'paused' ? 'mic' : 'mic'} size={recState === 'idle' ? 48 : 36} color="#fff" strokeWidth={1.5} />
+                <Icon name={recState === 'recording' ? 'pause' : 'mic'} size={recState === 'idle' ? 48 : 36} color="#fff" strokeWidth={1.5} />
                 <span style={{ fontSize: 13, color: 'rgba(255,255,255,.9)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   {recState === 'idle' && 'Gravar'}
                   {recState === 'recording' && 'Pausar'}
@@ -212,7 +230,6 @@ export default function AudioPage() {
               </button>
             </div>
 
-            {/* Stop button — só aparece quando gravando ou pausado */}
             {isRecordingOrPaused && (
               <button onClick={handleStop} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-sunken)', border: 'none', borderRadius: 999, padding: '10px 20px', cursor: 'pointer' }}>
                 <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--text-strong)' }} />
@@ -235,7 +252,6 @@ export default function AudioPage() {
 
             <audio ref={audioRef} src={audioUrl} onEnded={() => setPlaying(false)} style={{ display: 'none' }} />
 
-            {/* Play + Delete row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
               <button onClick={handleDiscard} style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--rose-100)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon name="trash" size={22} color="var(--rose-500)" />
@@ -246,7 +262,6 @@ export default function AudioPage() {
               <div style={{ width: 52 }} />
             </div>
 
-            {/* Título */}
             <div style={{ width: '100%' }}>
               <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 8 }}>
                 Título da memória

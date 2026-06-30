@@ -68,10 +68,15 @@ function ImageViewer({
         }}
         onClick={e => e.stopPropagation()}
       >
-        {currentUrl
-          ? <img src={currentUrl} alt={memory.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
-          : <span style={{ fontSize: 88 }}>{memory.emoji || '💜'}</span>
-        }
+        {memory.type === 'audio' ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,.18)' }}>
+            <Icon name="mic" size={56} color="#fff" strokeWidth={1.5} />
+          </div>
+        ) : currentUrl ? (
+          <img src={currentUrl} alt={memory.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+        ) : (
+          <span style={{ fontSize: 88 }}>{memory.emoji || '💜'}</span>
+        )}
 
         {/* Setas de navegação (múltiplas fotos) */}
         {allUrls.length > 1 && (
@@ -174,6 +179,11 @@ function ImageViewer({
           {memory.title}
         </h2>
 
+        {/* Audio player */}
+        {memory.type === 'audio' && memory.media_url && (
+          <audio controls src={memory.media_url} style={{ width: '100%', height: 40 }} />
+        )}
+
         {/* Body */}
         <p
           style={{
@@ -272,12 +282,12 @@ function MemoryCard({
         border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-md)',
         display: 'flex',
-        flexDirection: memory.media_url ? 'column' : 'row',
+        flexDirection: (memory.media_url && memory.type !== 'audio') ? 'column' : 'row',
         overflow: 'hidden',
         cursor: 'pointer',
       }}
     >
-      {memory.media_url ? (
+      {memory.media_url && memory.type !== 'audio' ? (
         /* ── Layout vertical quando tem foto ── */
         <>
           {/* Foto por inteira, sem corte */}
@@ -304,7 +314,15 @@ function MemoryCard({
         /* ── Layout horizontal quando só tem emoji/texto ── */
         <>
           <div style={{ width: 100, flexShrink: 0, background: memory.bg_color || 'var(--gradient-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 40 }}>{memory.emoji || '💜'}</span>
+            {memory.type === 'audio' ? (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 32 }}>
+                {[10, 22, 14, 28, 16, 24, 12].map((h, i) => (
+                  <div key={i} style={{ width: 3, height: h, borderRadius: 2, background: 'rgba(255,255,255,.9)' }} />
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontSize: 40 }}>{memory.emoji || '💜'}</span>
+            )}
           </div>
           <div style={{ flex: 1, padding: 14, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, position: 'relative' }}>
             <button onClick={handleLike} style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', background: 'transparent', border: liked ? 'none' : '1.5px solid var(--border-strong)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
