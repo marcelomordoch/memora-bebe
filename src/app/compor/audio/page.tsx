@@ -7,84 +7,119 @@ import ScreenHeader from '@/components/ui/ScreenHeader'
 import Button from '@/components/ui/Button'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { createMemory } from '@/lib/supabase/queries'
+import { createMemory, unlockAchievement } from '@/lib/supabase/queries'
 import { uploadFile, generateFilePath } from '@/lib/supabase/storage'
 import { MEMORY_COLORS } from '@/lib/utils'
 
-type State = 'idle' | 'recording' | 'preview' | 'saving'
+type RecState = 'idle' | 'recording' | 'paused' | 'done'
 
 export default function AudioPage() {
   const router = useRouter()
   const { baby, user } = useApp()
 
-  const [state, setState] = useState<State>('idle')
+  const [recState, setRecState] = useState<RecState>('idle')
   const [seconds, setSeconds] = useState(0)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [title, setTitle] = useState('')
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [playing, setPlaying] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const [playing, setPlaying] = useState(false)
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [])
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      if (audioUrl) URL.revokeObjectURL(audioUrl)
+    }
+  }, []) // eslint-disable-line
 
-  async function startRecording() {
+  function startTimer() {
+    timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000)
+  }
+  function stopTimer() {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+  }
+
+  async function handleStart() {
     setError('')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg' })
+      streamRef.current = stream
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg'
+      const mr = new MediaRecorder(stream, { mimeType })
       chunksRef.current = []
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       mr.onstop = () => {
-        stream.getTracks().forEach(t => t.stop())
         const blob = new Blob(chunksRef.current, { type: mr.mimeType })
         const url = URL.createObjectURL(blob)
         setAudioBlob(blob)
         setAudioUrl(url)
-        setState('preview')
+        setRecState('done')
+        streamRef.current?.getTracks().forEach(t => t.stop())
       }
       mr.start(100)
       mediaRecorderRef.current = mr
-      setState('recording')
       setSeconds(0)
-      timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000)
+      startTimer()
+      setRecState('recording')
     } catch {
       setError('Não foi possível acessar o microfone. Verifique as permissões.')
     }
   }
 
-  function stopRecording() {
-    if (timerRef.current) clearInterval(timerRef.current)
+  function handlePause() {
+    mediaRecorderRef.current?.pause()
+    stopTimer()
+    setRecState('paused')
+  }
+
+  function handleResume() {
+    mediaRecorderRef.current?.resume()
+    startTimer()
+    setRecState('recording')
+  }
+
+  function handleStop() {
+    stopTimer()
     mediaRecorderRef.current?.stop()
+  }
+
+  function handleMainButton() {
+    if (recState === 'idle') handleStart()
+    else if (recState === 'recording') handlePause()
+    else if (recState === 'paused') handleResume()
   }
 
   function togglePlay() {
     if (!audioRef.current || !audioUrl) return
-    if (playing) {
-      audioRef.current.pause()
-      setPlaying(false)
-    } else {
-      audioRef.current.play()
-      setPlaying(true)
-    }
+    if (playing) { audioRef.current.pause(); setPlaying(false) }
+    else { audioRef.current.play(); setPlaying(true) }
   }
 
-  function formatTime(s: number) {
-    const m = Math.floor(s / 60)
-    const sec = s % 60
-    return `${m}:${sec.toString().padStart(2, '0')}`
+  function handleDiscard() {
+    if (audioUrl) URL.revokeObjectURL(audioUrl)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    stopTimer()
+    setAudioUrl(null)
+    setAudioBlob(null)
+    setSeconds(0)
+    setPlaying(false)
+    setRecState('idle')
+    setTitle('')
+    setError('')
   }
 
   async function handleSave() {
     if (!audioBlob || !baby?.id || !user?.id) return
     if (!title.trim()) { setError('Dê um título para o áudio.'); return }
-    setState('saving')
+    setSaving(true)
     setError('')
     try {
       const lifeStage = baby.status === 'gestacao' ? 'gestacao' : '0-1'
@@ -104,94 +139,90 @@ export default function AudioPage() {
         emoji: '🎙️',
         week: baby.week,
       })
+      unlockAchievement(baby.id, user.id, 'narrador', 100).catch(() => {})
       router.push('/memorias')
     } catch (err) {
       console.error(err)
       setError('Erro ao salvar. Tente novamente.')
-      setState('preview')
+      setSaving(false)
     }
   }
 
-  function handleDiscard() {
-    if (audioUrl) URL.revokeObjectURL(audioUrl)
-    setAudioUrl(null)
-    setAudioBlob(null)
-    setSeconds(0)
-    setPlaying(false)
-    setState('idle')
-    setTitle('')
-    setError('')
+  function formatTime(s: number) {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m}:${sec.toString().padStart(2, '0')}`
   }
+
+  const isRecordingOrPaused = recState === 'recording' || recState === 'paused'
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
       <StatusBar />
       <ScreenHeader title="Gravar Áudio" onBack={() => router.back()} />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 40px', gap: 32 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 40px', gap: 28 }}>
 
-        {state === 'idle' && (
-          <>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--text-strong)', margin: '0 0 8px' }}>
-                Gravar memória em áudio
-              </p>
-              <p style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0, lineHeight: 1.6 }}>
-                Toque no botão e fale. Solte quando terminar.
-              </p>
-            </div>
-
-            {error && <p style={{ fontSize: 13, color: 'var(--danger)', textAlign: 'center', fontFamily: 'var(--font-body)' }}>{error}</p>}
-
-            {/* Big record button */}
-            <button
-              onMouseDown={startRecording}
-              onTouchStart={e => { e.preventDefault(); startRecording() }}
-              style={{
-                width: 140, height: 140, borderRadius: '50%',
-                background: 'var(--gradient-brand)',
-                border: 'none', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
-                boxShadow: 'var(--shadow-accent)',
-                transition: 'transform 150ms ease',
-              }}
-            >
-              <Icon name="mic" size={48} color="#fff" strokeWidth={1.5} />
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.85)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>Gravar</span>
-            </button>
-          </>
+        {recState !== 'done' && (
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--text-strong)', margin: '0 0 8px' }}>
+              Gravar memória em áudio
+            </p>
+            <p style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0, lineHeight: 1.6 }}>
+              {recState === 'idle' && 'Toque para começar a gravar.'}
+              {recState === 'recording' && 'Gravando... toque para pausar.'}
+              {recState === 'paused' && 'Pausado. Toque para continuar.'}
+            </p>
+          </div>
         )}
 
-        {state === 'recording' && (
+        {error && <p style={{ fontSize: 13, color: 'var(--danger)', textAlign: 'center', fontFamily: 'var(--font-body)' }}>{error}</p>}
+
+        {recState !== 'done' && (
           <>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, color: 'var(--danger)', margin: '0 0 6px' }}>
+            {/* Timer */}
+            {isRecordingOrPaused && (
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, color: recState === 'recording' ? 'var(--danger)' : 'var(--text-muted)', margin: 0 }}>
                 {formatTime(seconds)}
               </p>
-              <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0 }}>Gravando...</p>
-            </div>
+            )}
 
-            {/* Animated pulse */}
+            {/* Main record/pause/resume button */}
             <div style={{ position: 'relative', width: 140, height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: 'rgba(197,107,107,.15)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              {recState === 'recording' && (
+                <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: 'rgba(197,107,107,.15)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              )}
               <button
-                onMouseUp={stopRecording}
-                onTouchEnd={e => { e.preventDefault(); stopRecording() }}
+                onClick={handleMainButton}
                 style={{
-                  width: 120, height: 120, borderRadius: '50%',
-                  background: 'var(--danger)', border: '4px solid rgba(197,107,107,.3)',
-                  cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  boxShadow: '0 4px 20px rgba(197,107,107,.4)',
+                  width: recState === 'idle' ? 140 : 120, height: recState === 'idle' ? 140 : 120, borderRadius: '50%',
+                  background: recState === 'recording' ? 'var(--danger)' : 'var(--gradient-brand)',
+                  border: recState !== 'idle' ? '4px solid rgba(197,107,107,.25)' : 'none',
+                  cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxShadow: recState === 'recording' ? '0 4px 20px rgba(197,107,107,.4)' : 'var(--shadow-accent)',
+                  transition: 'all 200ms ease',
                 }}
               >
-                <Icon name="mic" size={40} color="#fff" strokeWidth={2} />
-                <span style={{ fontSize: 12, color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 600 }}>Soltar para parar</span>
+                <Icon name={recState === 'recording' ? 'pause' : recState === 'paused' ? 'mic' : 'mic'} size={recState === 'idle' ? 48 : 36} color="#fff" strokeWidth={1.5} />
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,.9)', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
+                  {recState === 'idle' && 'Gravar'}
+                  {recState === 'recording' && 'Pausar'}
+                  {recState === 'paused' && 'Continuar'}
+                </span>
               </button>
             </div>
+
+            {/* Stop button — só aparece quando gravando ou pausado */}
+            {isRecordingOrPaused && (
+              <button onClick={handleStop} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-sunken)', border: 'none', borderRadius: 999, padding: '10px 20px', cursor: 'pointer' }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--text-strong)' }} />
+                <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--text-strong)' }}>Finalizar gravação</span>
+              </button>
+            )}
           </>
         )}
 
-        {(state === 'preview' || state === 'saving') && audioUrl && (
+        {recState === 'done' && audioUrl && (
           <>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: 'var(--text-strong)', margin: '0 0 6px' }}>
@@ -202,14 +233,18 @@ export default function AudioPage() {
               </p>
             </div>
 
-            {/* Player */}
             <audio ref={audioRef} src={audioUrl} onEnded={() => setPlaying(false)} style={{ display: 'none' }} />
-            <button
-              onClick={togglePlay}
-              style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--gradient-brand)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-accent)' }}
-            >
-              <Icon name={playing ? 'pause' : 'play'} size={40} color="#fff" strokeWidth={1.5} />
-            </button>
+
+            {/* Play + Delete row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <button onClick={handleDiscard} style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--rose-100)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="trash" size={22} color="var(--rose-500)" />
+              </button>
+              <button onClick={togglePlay} style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--gradient-brand)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-accent)' }}>
+                <Icon name={playing ? 'pause' : 'play'} size={36} color="#fff" strokeWidth={1.5} />
+              </button>
+              <div style={{ width: 52 }} />
+            </div>
 
             {/* Título */}
             <div style={{ width: '100%' }}>
@@ -224,16 +259,9 @@ export default function AudioPage() {
               />
             </div>
 
-            {error && <p style={{ fontSize: 13, color: 'var(--danger)', textAlign: 'center', fontFamily: 'var(--font-body)' }}>{error}</p>}
-
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Button fullWidth size="lg" onClick={handleSave} loading={state === 'saving'} disabled={!title.trim()}>
-                Salvar memória 💜
-              </Button>
-              <button onClick={handleDiscard} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', padding: '8px 0' }}>
-                Descartar e gravar novamente
-              </button>
-            </div>
+            <Button fullWidth size="lg" onClick={handleSave} loading={saving} disabled={!title.trim()}>
+              Salvar memória 💜
+            </Button>
           </>
         )}
       </div>

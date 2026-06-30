@@ -3,12 +3,12 @@ import { uploadFile, generateFilePath } from '@/lib/supabase/storage'
 import type { Baby, Memory, FamilyMember, FutureMessage, GiftCard, Notification, Achievement } from '@/types'
 
 const ACHIEVEMENTS_LIST: Omit<Achievement, 'unlocked' | 'unlocked_at'>[] = [
-  { id: 'primeira-memoria',  title: 'Primeira Memória',     description: 'Registrou sua primeira memória',          xp: 50,  icon: 'star'      },
-  { id: 'familia-conectada', title: 'Família Conectada',    description: 'Convidou um familiar',                    xp: 100, icon: 'users'     },
-  { id: 'escritor',          title: 'Escritor(a)',          description: 'Registrou 10 memórias',                   xp: 200, icon: 'file-text' },
-  { id: 'fotografo',         title: 'Fotógrafo(a)',         description: 'Adicionou 5 fotos',                       xp: 150, icon: 'camera'    },
-  { id: 'mensagem-tempo',    title: 'Mensagem no Tempo',    description: 'Criou uma mensagem para o futuro',        xp: 250, icon: 'clock'     },
-  { id: 'marco-mes',         title: 'Marco do Mês',         description: 'Registrou memórias por 30 dias seguidos', xp: 500, icon: 'award'     },
+  { id: 'primeira-memoria',  title: 'Primeira Memória',     description: 'Registrou sua primeira memória',           xp: 50,  icon: 'star'      },
+  { id: 'narrador',          title: 'Narrador(a)',          description: 'Gravou seu primeiro áudio',                xp: 100, icon: 'mic'       },
+  { id: 'escritor',          title: 'Escritor(a)',          description: 'Registrou 10 memórias',                    xp: 200, icon: 'file-text' },
+  { id: 'fotografo',         title: 'Fotógrafo(a)',         description: 'Adicionou 5 fotos',                        xp: 150, icon: 'camera'    },
+  { id: 'mensagem-tempo',    title: 'Mensagem no Tempo',    description: 'Criou uma mensagem para o futuro',         xp: 250, icon: 'clock'     },
+  { id: 'marco-mes',         title: 'Marco do Mês',         description: 'Registrou memórias por 30 dias seguidos',  xp: 500, icon: 'award'     },
 ]
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────

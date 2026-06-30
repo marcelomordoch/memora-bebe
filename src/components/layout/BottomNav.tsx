@@ -4,13 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 
-const TABS = [
-  { href: '/inicio',      icon: 'home',  label: 'Início' },
-  { href: '/memorias',    icon: 'image', label: 'Memórias' },
-  { href: '/conquistas',  icon: 'award', label: 'Conquistas' },
-  { href: '/perfil',      icon: 'user',  label: 'Perfil' },
-]
-
 export default function BottomNav() {
   const path = usePathname()
 
@@ -25,20 +18,6 @@ export default function BottomNav() {
       paddingTop: 8,
       zIndex: 100,
     }}>
-      {TABS.map((tab, i) => {
-        const active = path.startsWith(tab.href)
-        if (i === 2) {
-          return (
-            <div key="fab-slot" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 60 }}>
-              {/* FAB inserted between tab 2 and 3 */}
-              <div />
-            </div>
-          )
-        }
-        return null
-      })}
-
-      {/* Render tabs with FAB in middle */}
       <TabItem href="/inicio" icon="home" label="Início" active={path.startsWith('/inicio')} />
       <TabItem href="/memorias" icon="image" label="Memórias" active={path.startsWith('/memorias')} />
 

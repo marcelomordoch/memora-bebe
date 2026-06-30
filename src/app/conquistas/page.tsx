@@ -12,12 +12,12 @@ import type { Achievement } from '@/types'
 type Tab = 'todas' | 'alcancadas' | 'em-breve'
 
 const ACHIEVEMENT_ACTIONS: Record<string, { href: string; label: string }> = {
-  'primeira-memoria':  { href: '/compor/historia', label: 'Escrever primeira memória' },
-  'familia-conectada': { href: '/perfil/familia',  label: 'Convidar um familiar' },
-  'escritor':          { href: '/memorias',        label: 'Ver minhas memórias' },
-  'fotografo':         { href: '/compor',          label: 'Adicionar foto' },
-  'mensagem-tempo':    { href: '/perfil/mensagens', label: 'Criar mensagem para o futuro' },
-  'marco-mes':         { href: '/memorias',        label: 'Continue registrando' },
+  'primeira-memoria': { href: '/compor/historia', label: 'Escrever primeira memória' },
+  'narrador':         { href: '/compor/audio',    label: 'Gravar um áudio' },
+  'escritor':         { href: '/memorias',        label: 'Ver minhas memórias' },
+  'fotografo':        { href: '/compor',          label: 'Adicionar foto' },
+  'mensagem-tempo':   { href: '/perfil/mensagens', label: 'Criar mensagem para o futuro' },
+  'marco-mes':        { href: '/memorias',        label: 'Continue registrando' },
 }
 
 function levelFromXP(xp: number) {

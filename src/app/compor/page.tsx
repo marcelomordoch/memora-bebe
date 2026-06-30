@@ -53,6 +53,7 @@ function MediaForm({
   const [files, setFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -91,7 +92,7 @@ function MediaForm({
         user_id: user.id,
         type,
         title: title.trim(),
-        body: '',
+        body: description.trim(),
         life_stage: lifeStage,
         media_url: urls[0],
         media_urls: urls.length > 1 ? urls : undefined,
@@ -159,6 +160,11 @@ function MediaForm({
         <div>
           <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 8 }}>Título</label>
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder={isPhoto ? 'Ex: Primeiro ultrassom!' : 'Ex: Primeiros movimentos...'} style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border-strong)', borderRadius: 12, fontSize: 15, fontFamily: 'var(--font-body)', color: 'var(--text-strong)', background: '#fff' }} />
+        </div>
+
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 8 }}>Descrição <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(opcional)</span></label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Ex: O que te marcou neste momento?" style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border-strong)', borderRadius: 12, fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text-strong)', background: '#fff', resize: 'none' }} />
         </div>
 
         {error && <p style={{ fontSize: 13, color: 'var(--danger)', fontFamily: 'var(--font-body)', margin: 0 }}>{error}</p>}
