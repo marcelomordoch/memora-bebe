@@ -9,7 +9,7 @@ import Icon from '@/components/ui/Icon'
 import Button from '@/components/ui/Button'
 import { useApp } from '@/contexts/AppContext'
 import { createMemory, unlockAchievement, getMemories } from '@/lib/supabase/queries'
-import { uploadFile, generateFilePath } from '@/lib/supabase/storage'
+import { uploadToR2 } from '@/lib/r2/upload'
 import { MEMORY_COLORS } from '@/lib/utils'
 
 // ── Upgrade modal ──────────────────────────────────────────────────────────────
@@ -61,13 +61,13 @@ function MediaForm({
   const accept = isPhoto ? 'image/*' : 'video/*'
   const multiple = isPhoto
 
-  const MAX_FILE_SIZE = 45 * 1024 * 1024 // 45MB (limite do plano gratuito Supabase é 50MB)
+  const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB (armazenamento via Cloudflare R2)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? [])
     const tooBig = selected.filter(f => f.size > MAX_FILE_SIZE)
     if (tooBig.length > 0) {
-      setError(`${tooBig.length === 1 ? 'Um arquivo é' : `${tooBig.length} arquivos são`} maior${tooBig.length === 1 ? '' : 'es'} que 45MB. ${isPhoto ? 'Escolha fotos menores.' : 'Grave um vídeo mais curto ou reduza a qualidade nas configurações da câmera.'}`)
+      setError(`${tooBig.length === 1 ? 'Um arquivo é' : `${tooBig.length} arquivos são`} maior${tooBig.length === 1 ? '' : 'es'} que 500MB.`)
       const valid = selected.filter(f => f.size <= MAX_FILE_SIZE)
       setFiles(valid)
       setPreviews(valid.map(f => URL.createObjectURL(f)))
@@ -87,14 +87,13 @@ function MediaForm({
     setSubmitting(true)
     try {
       const lifeStage = baby.status === 'gestacao' ? 'gestacao' : '0-1'
-      const bucket = isPhoto ? 'memories' : 'videos'
+      const folder = isPhoto ? 'memories' : 'videos'
 
-      // Upload todos os arquivos em paralelo
+      // Upload todos os arquivos em paralelo, direto para o R2
       const urls = await Promise.all(
         files.map(async f => {
-          const path = generateFilePath(user.id, f.name)
           try {
-            return await uploadFile(bucket, path, f)
+            return await uploadToR2(f, folder)
           } catch (uploadErr: unknown) {
             const msg = uploadErr instanceof Error ? uploadErr.message : 'Erro desconhecido'
             throw new Error(`Falha no upload de "${f.name}": ${msg}`)
@@ -163,7 +162,7 @@ function MediaForm({
               {isPhoto ? 'Selecionar fotos' : 'Selecionar vídeo'}
             </span>
             <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>
-              {isPhoto ? 'Você pode selecionar várias · até 45MB cada' : 'Vídeos curtos · até 45MB'}
+              {isPhoto ? 'Você pode selecionar várias · até 500MB cada' : 'Até 500MB'}
             </span>
           </button>
         )}

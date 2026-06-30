@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { uploadFile, generateFilePath } from '@/lib/supabase/storage'
+import { uploadToR2 } from '@/lib/r2/upload'
 import type { Baby, Memory, FamilyMember, FutureMessage, GiftCard, Notification, Achievement } from '@/types'
 
 const ACHIEVEMENTS_LIST: Omit<Achievement, 'unlocked' | 'unlocked_at'>[] = [
@@ -113,11 +113,7 @@ export async function updateBaby(id: string, data: Partial<Baby>): Promise<Baby>
 }
 
 export async function uploadBabyPhoto(babyId: string, file: File): Promise<string> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-  const path = generateFilePath(user.id, file.name)
-  const publicUrl = await uploadFile('babies', path, file)
+  const publicUrl = await uploadToR2(file, 'babies')
   await updateBaby(babyId, { photo_url: publicUrl })
   return publicUrl
 }
@@ -166,11 +162,9 @@ export async function toggleLike(memoryId: string, userId: string): Promise<void
 }
 
 export async function uploadMemoryMedia(memoryId: string, file: File, type: string): Promise<string> {
+  const folder = type === 'video' ? 'videos' : type === 'audio' ? 'audio' : 'memories'
+  const publicUrl = await uploadToR2(file, folder)
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-  const path = generateFilePath(user.id, file.name)
-  const publicUrl = await uploadFile('memories', path, file)
   await supabase.from('memories').update({ media_url: publicUrl }).eq('id', memoryId)
   return publicUrl
 }

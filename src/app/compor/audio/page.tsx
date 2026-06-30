@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
 import { createMemory, unlockAchievement } from '@/lib/supabase/queries'
-import { uploadFile, generateFilePath } from '@/lib/supabase/storage'
+import { uploadToR2 } from '@/lib/r2/upload'
 import { MEMORY_COLORS } from '@/lib/utils'
 
 type RecState = 'idle' | 'recording' | 'paused' | 'done'
@@ -144,8 +144,7 @@ export default function AudioPage() {
       const lifeStage = baby.status === 'gestacao' ? 'gestacao' : '0-1'
       const ext = audioBlob.type.includes('webm') ? 'webm' : 'ogg'
       const file = new File([audioBlob], `audio_${Date.now()}.${ext}`, { type: audioBlob.type })
-      const path = generateFilePath(user.id, file.name)
-      const mediaUrl = await uploadFile('audio', path, file)
+      const mediaUrl = await uploadToR2(file, 'audio')
       await createMemory({
         baby_id: baby.id,
         user_id: user.id,
