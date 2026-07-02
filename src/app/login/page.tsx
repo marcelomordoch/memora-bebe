@@ -111,9 +111,9 @@ export default function LoginPage() {
 
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <img
-            src="/logo-full.png"
+            src="/logo-login.png"
             alt="Memora Bebê"
-            style={{ width: 160, height: 'auto', borderRadius: 20, boxShadow: '0 4px 24px rgba(0,0,0,.18)' }}
+            style={{ width: 180, height: 'auto', borderRadius: 24, boxShadow: '0 4px 24px rgba(0,0,0,.22)' }}
           />
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', fontFamily: 'var(--font-body)', textAlign: 'center', margin: 0 }}>
             A memória emocional da infância.
