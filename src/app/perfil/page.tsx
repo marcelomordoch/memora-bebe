@@ -7,6 +7,7 @@ import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
 import { getAchievements, getFamilyMembers, uploadBabyPhoto, updateBaby } from '@/lib/supabase/queries'
 import { calculateCurrentWeek, formatLocalDate } from '@/lib/utils'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 
 const links = [
   {
@@ -55,6 +56,7 @@ export default function PerfilPage() {
   const [saving, setSaving] = useState(false)
   const [photoUrl, setPhotoUrl] = useState(baby?.photo_url ?? '')
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false)
+  const signedPhotoUrl = useSignedUrl(photoUrl || null)
 
   // Sincroniza photoUrl sempre que o baby carregar/atualizar (baby chega async do AppContext)
   useEffect(() => {
@@ -121,8 +123,8 @@ export default function PerfilPage() {
         <div style={{ position: 'relative', marginBottom: 14 }}>
           {/* Avatar */}
           <div style={{ width: 96, height: 96, borderRadius: 48, background: 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42, border: '3px solid #fff', boxShadow: '0 4px 20px rgba(107,83,174,0.35)', overflow: 'hidden', position: 'relative' }}>
-            {photoUrl && !photoLoadFailed
-              ? <img src={photoUrl} alt={baby?.name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={() => setPhotoLoadFailed(true)} onLoad={() => setPhotoLoadFailed(false)} />
+            {signedPhotoUrl && !photoLoadFailed
+              ? <img src={signedPhotoUrl} alt={baby?.name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={() => setPhotoLoadFailed(true)} onLoad={() => setPhotoLoadFailed(false)} />
               : <span>💜</span>
             }
           </div>

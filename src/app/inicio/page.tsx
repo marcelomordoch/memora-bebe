@@ -10,6 +10,7 @@ import { useApp } from '@/contexts/AppContext'
 import { getMemories, updateBaby, createMemory, unlockAchievement } from '@/lib/supabase/queries'
 import { uploadToR2 } from '@/lib/r2/upload'
 import { formatShortDate, calculateCurrentWeek, weeksUntilDue, MEMORY_COLORS, formatLocalDate } from '@/lib/utils'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 import type { Memory } from '@/types'
 
 export default function DashboardPage() {
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [recentMemory, setRecentMemory] = useState<Memory | null>(null)
   const [memoriesLoading, setMemoriesLoading] = useState(false)
+  const signedRecentUrl = useSignedUrl(recentMemory?.media_url)
 
   // ── Nasceu modal ──────────────────────────────────────────────────────────
   const [showNasceu, setShowNasceu] = useState(false)
@@ -301,7 +303,7 @@ export default function DashboardPage() {
                   ) : recentMemory.type === 'video' ? (
                     <Icon name="video" size={32} color="#fff" strokeWidth={1.5} />
                   ) : recentMemory.media_url ? (
-                    <img src={recentMemory.media_url} alt={recentMemory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'absolute', inset: 0 }} />
+                    <img src={signedRecentUrl} alt={recentMemory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', position: 'absolute', inset: 0 }} />
                   ) : (
                     <span>{recentMemory.emoji || '💜'}</span>
                   )}

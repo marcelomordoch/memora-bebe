@@ -6,6 +6,7 @@ import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
 import { getMemories, toggleLike, deleteMemory } from '@/lib/supabase/queries'
 import { formatDate, formatShortDate } from '@/lib/utils'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 import type { Memory } from '@/types'
 
 // ─── Filter chips ────────────────────────────────────────────────────────────
@@ -41,6 +42,8 @@ function ImageViewer({
   const allUrls = memory.media_urls?.length ? memory.media_urls : memory.media_url ? [memory.media_url] : []
   const [photoIndex, setPhotoIndex] = useState(0)
   const currentUrl = allUrls[photoIndex] || null
+  const signedCurrentUrl = useSignedUrl(currentUrl)
+  const signedAudioUrl = useSignedUrl(memory.type === 'audio' ? memory.media_url : null)
 
   return (
     <div
@@ -72,10 +75,10 @@ function ImageViewer({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,.18)' }}>
             <Icon name="mic" size={56} color="#fff" strokeWidth={1.5} />
           </div>
-        ) : memory.type === 'video' && currentUrl ? (
-          <video src={currentUrl} controls playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
-        ) : currentUrl ? (
-          <img src={currentUrl} alt={memory.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+        ) : memory.type === 'video' && signedCurrentUrl ? (
+          <video src={signedCurrentUrl} controls playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+        ) : signedCurrentUrl ? (
+          <img src={signedCurrentUrl} alt={memory.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
         ) : (
           <span style={{ fontSize: 88 }}>{memory.emoji || '💜'}</span>
         )}
@@ -183,8 +186,8 @@ function ImageViewer({
         </h2>
 
         {/* Audio player */}
-        {memory.type === 'audio' && memory.media_url && (
-          <audio controls src={memory.media_url} style={{ width: '100%', height: 40 }} />
+        {memory.type === 'audio' && signedAudioUrl && (
+          <audio controls src={signedAudioUrl} style={{ width: '100%', height: 40 }} />
         )}
 
         {/* Body */}
@@ -269,6 +272,7 @@ function MemoryCard({
 }) {
   const liked = memory.liked_by_me
   const count = memory.likes_count
+  const signedMediaUrl = useSignedUrl(memory.media_url)
 
   function handleLike(e: React.MouseEvent) {
     e.stopPropagation()
@@ -297,7 +301,7 @@ function MemoryCard({
             {memory.type === 'video' ? (
               <>
                 <video
-                  src={memory.media_url ? `${memory.media_url}#t=0.1` : undefined}
+                  src={signedMediaUrl ? `${signedMediaUrl}#t=0.1` : undefined}
                   muted
                   playsInline
                   preload="metadata"
@@ -310,7 +314,7 @@ function MemoryCard({
               </>
             ) : (
               <img
-                src={memory.media_url}
+                src={signedMediaUrl}
                 alt={memory.title}
                 style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', maxHeight: 320 }}
               />
