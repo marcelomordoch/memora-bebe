@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import { useApp } from '@/contexts/AppContext'
 import { createMemory, unlockAchievement, getMemories } from '@/lib/supabase/queries'
 import { uploadToR2 } from '@/lib/r2/upload'
+import { compressVideo } from '@/lib/r2/compress-video'
 import { MEMORY_COLORS } from '@/lib/utils'
 
 // ── Upgrade modal ──────────────────────────────────────────────────────────────
@@ -56,6 +57,8 @@ function MediaForm({
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [compressionStage, setCompressionStage] = useState<'loading' | 'compressing' | null>(null)
+  const [compressionPercent, setCompressionPercent] = useState(0)
 
   const isPhoto = type === 'foto'
   const accept = isPhoto ? 'image/*' : 'video/*'
@@ -89,9 +92,22 @@ function MediaForm({
       const lifeStage = baby.status === 'gestacao' ? 'gestacao' : '0-1'
       const folder = isPhoto ? 'memories' : 'videos'
 
+      // Compress video before upload (photos are compressed inside uploadToR2)
+      let filesToUpload = files
+      if (!isPhoto && files[0]) {
+        setCompressionStage('loading')
+        setCompressionPercent(0)
+        const compressed = await compressVideo(files[0], (stage, percent) => {
+          setCompressionStage(stage)
+          setCompressionPercent(percent)
+        })
+        setCompressionStage(null)
+        filesToUpload = [compressed]
+      }
+
       // Upload todos os arquivos em paralelo, direto para o R2
       const urls = await Promise.all(
-        files.map(async f => {
+        filesToUpload.map(async f => {
           try {
             return await uploadToR2(f, folder)
           } catch (uploadErr: unknown) {
@@ -188,7 +204,27 @@ function MediaForm({
 
         {error && <p style={{ fontSize: 13, color: 'var(--danger)', fontFamily: 'var(--font-body)', margin: 0 }}>{error}</p>}
 
-        <Button fullWidth onClick={handleSubmit} loading={submitting} disabled={!files.length || !title.trim()}>
+        {/* Compression progress */}
+        {compressionStage && (
+          <div style={{ background: 'var(--violet-50)', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>🎬</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-display)', margin: 0 }}>
+                  {compressionStage === 'loading' ? 'Carregando compressor...' : `Comprimindo vídeo... ${compressionPercent}%`}
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: '2px 0 0' }}>
+                  {compressionStage === 'loading' ? 'Isso acontece só na primeira vez' : 'O vídeo ficará muito menor sem perder qualidade'}
+                </p>
+              </div>
+            </div>
+            <div style={{ height: 6, background: 'var(--border-subtle)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: 'var(--gradient-brand)', borderRadius: 999, width: `${compressionStage === 'loading' ? compressionPercent / 2 : 50 + compressionPercent / 2}%`, transition: 'width 300ms ease' }} />
+            </div>
+          </div>
+        )}
+
+        <Button fullWidth onClick={handleSubmit} loading={submitting && !compressionStage} disabled={!files.length || !title.trim() || !!compressionStage}>
           Salvar memória 💜
         </Button>
       </div>
