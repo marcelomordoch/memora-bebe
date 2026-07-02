@@ -20,13 +20,12 @@ export default function CriarBebeStep1() {
   const [gender, setGender] = useState<'menino' | 'menina' | 'surpresa'>('menina')
 
   function handleNext() {
-    // Armazena temporariamente no contexto — será salvo no Supabase no passo 3
+    const wizardData = { name: name.trim(), gender, status: 'gestacao' as const }
+    sessionStorage.setItem('wizard_baby', JSON.stringify(wizardData))
     setBaby({
       id: '',
       user_id: user?.id || '',
-      name: name.trim(),
-      gender,
-      status: 'gestacao',
+      ...wizardData,
       created_at: new Date().toISOString(),
     })
     router.push('/criar-bebe/passo-2')

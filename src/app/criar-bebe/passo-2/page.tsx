@@ -16,15 +16,17 @@ export default function CriarBebeStep2() {
   const [birthDate, setBirthDate] = useState('')
 
   function handleNext() {
-    // Calcula a semana automaticamente a partir da due_date
     const weekFromDate = dueDate ? calculateCurrentWeek({ due_date: dueDate }) : undefined
-    setBaby({
-      ...baby!,
+    const prev = JSON.parse(sessionStorage.getItem('wizard_baby') || '{}')
+    const wizardData = {
+      ...prev,
       status,
-      due_date: status === 'gestacao' ? dueDate || undefined : undefined,
-      birth_date: status === 'nascido' ? birthDate || undefined : undefined,
+      due_date: status === 'gestacao' ? (dueDate || undefined) : undefined,
+      birth_date: status === 'nascido' ? (birthDate || undefined) : undefined,
       week: status === 'gestacao' ? weekFromDate : undefined,
-    })
+    }
+    sessionStorage.setItem('wizard_baby', JSON.stringify(wizardData))
+    setBaby({ id: '', user_id: baby?.user_id || '', created_at: new Date().toISOString(), ...wizardData })
     router.push('/criar-bebe/passo-3')
   }
 

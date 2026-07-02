@@ -19,18 +19,25 @@ export default function CriarBebeStep3() {
     setError('')
 
     try {
+      // Fallback to sessionStorage if context was reset (e.g. page refresh or token refresh race)
+      const saved = JSON.parse(sessionStorage.getItem('wizard_baby') || '{}')
+      const name = baby?.name || saved.name
+      const gender = baby?.gender || saved.gender
+      const status = baby?.status || saved.status || 'gestacao'
+      const due_date = baby?.due_date || saved.due_date || null
+      const birth_date = baby?.birth_date || saved.birth_date || null
+      const week = baby?.week || saved.week || null
+
+      if (!name || !gender) {
+        setError('Volte ao passo 1 e preencha o nome e gênero do bebê.')
+        setLoading(false)
+        return
+      }
+
       const res = await fetch('/api/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: baby?.name,
-          gender: baby?.gender,
-          status: baby?.status ?? 'gestacao',
-          due_date: baby?.due_date || null,
-          birth_date: baby?.birth_date || null,
-          week: baby?.week || null,
-          about: about.trim() || null,
-        }),
+        body: JSON.stringify({ name, gender, status, due_date, birth_date, week, about: about.trim() || null }),
       })
 
       const json = await res.json()
@@ -41,6 +48,7 @@ export default function CriarBebeStep3() {
         return
       }
 
+      sessionStorage.removeItem('wizard_baby')
       setBaby(json.baby)
       router.push('/onboarding')
     } catch (err: unknown) {
