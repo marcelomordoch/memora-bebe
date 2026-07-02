@@ -6,7 +6,7 @@ import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
 import { getAchievements, getFamilyMembers, uploadBabyPhoto, updateBaby } from '@/lib/supabase/queries'
-import { calculateCurrentWeek } from '@/lib/utils'
+import { calculateCurrentWeek, formatLocalDate } from '@/lib/utils'
 
 const links = [
   {
@@ -51,6 +51,7 @@ export default function PerfilPage() {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(baby?.name ?? '')
   const [editAbout, setEditAbout] = useState(baby?.about ?? '')
+  const [editBirthDate, setEditBirthDate] = useState(baby?.birth_date ?? '')
   const [saving, setSaving] = useState(false)
   const [photoUrl, setPhotoUrl] = useState(baby?.photo_url ?? '')
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false)
@@ -92,8 +93,10 @@ export default function PerfilPage() {
     if (!baby?.id) return
     setSaving(true)
     try {
-      await updateBaby(baby.id, { name: editName, about: editAbout })
-      setBaby({ ...baby, name: editName, about: editAbout })
+      const updates: Parameters<typeof updateBaby>[1] = { name: editName, about: editAbout }
+      if (editBirthDate) updates.birth_date = editBirthDate
+      await updateBaby(baby.id, updates)
+      setBaby({ ...baby, name: editName, about: editAbout, ...(editBirthDate ? { birth_date: editBirthDate } : {}) })
       setEditing(false)
     } catch (err) {
       console.error(err)
@@ -106,7 +109,7 @@ export default function PerfilPage() {
   const statusLabel = baby?.status === 'gestacao'
     ? currentWeek ? `${currentWeek}ª semana de gestação` : 'Em gestação'
     : baby?.birth_date
-      ? `Nascido(a) em ${new Date(baby.birth_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`
+      ? `Nascido(a) em ${formatLocalDate(baby.birth_date)}`
       : 'Bebê registrado'
 
   return (
@@ -155,7 +158,7 @@ export default function PerfilPage() {
         </h2>
         <p style={{ fontSize: 14, color: '#8B89B0', margin: '0 0 10px' }}>{statusLabel}</p>
         <button
-          onClick={() => { setEditing(true); setEditName(baby?.name ?? ''); setEditAbout(baby?.about ?? '') }}
+          onClick={() => { setEditing(true); setEditName(baby?.name ?? ''); setEditAbout(baby?.about ?? ''); setEditBirthDate(baby?.birth_date ?? '') }}
           style={{
             padding: '7px 20px',
             border: '1.5px solid #E7E5F0',
@@ -180,6 +183,14 @@ export default function PerfilPage() {
           <input
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', border: '1.5px solid #E7E5F0', borderRadius: 12, fontFamily: 'Inter, sans-serif', fontSize: 15, color: '#2E2C4A', marginBottom: 12, outline: 'none', background: '#F4F3F7' }}
+          />
+          <label style={{ fontSize: 12, fontWeight: 600, color: '#8B89B0', display: 'block', marginBottom: 4 }}>Data de nascimento</label>
+          <input
+            type="date"
+            value={editBirthDate}
+            max={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setEditBirthDate(e.target.value)}
             style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', border: '1.5px solid #E7E5F0', borderRadius: 12, fontFamily: 'Inter, sans-serif', fontSize: 15, color: '#2E2C4A', marginBottom: 12, outline: 'none', background: '#F4F3F7' }}
           />
           <label style={{ fontSize: 12, fontWeight: 600, color: '#8B89B0', display: 'block', marginBottom: 4 }}>Sobre</label>

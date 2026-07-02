@@ -15,6 +15,16 @@ export function formatShortDate(dateStr: string): string {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 }
 
+// Parses a YYYY-MM-DD string as local time (avoids UTC-offset day-shift)
+export function parseDateLocal(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+export function formatLocalDate(dateStr: string): string {
+  return parseDateLocal(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
 export function timeAgo(dateStr: string): string {
   const d = new Date(dateStr)
   const now = new Date()

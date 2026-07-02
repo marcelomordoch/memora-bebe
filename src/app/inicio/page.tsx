@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button'
 import { useApp } from '@/contexts/AppContext'
 import { getMemories, updateBaby, createMemory, unlockAchievement } from '@/lib/supabase/queries'
 import { uploadToR2 } from '@/lib/r2/upload'
-import { formatShortDate, calculateCurrentWeek, weeksUntilDue, MEMORY_COLORS } from '@/lib/utils'
+import { formatShortDate, calculateCurrentWeek, weeksUntilDue, MEMORY_COLORS, formatLocalDate } from '@/lib/utils'
 import type { Memory } from '@/types'
 
 export default function DashboardPage() {
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                 {baby.birth_date && (
                   <p style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', fontFamily: 'var(--font-body)', marginTop: 6 }}>
                     Nasceu em{' '}
-                    {new Date(baby.birth_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    {formatLocalDate(baby.birth_date)}
                   </p>
                 )}
               </div>
