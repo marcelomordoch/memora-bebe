@@ -74,7 +74,7 @@ export async function compressVideo(
 
   onProgress('compressing', 100)
 
-  const blob = new Blob([data as Uint8Array], { type: 'video/mp4' })
+  const blob = new Blob([(data as Uint8Array).slice()], { type: 'video/mp4' })
   const name = file.name.replace(/\.[^.]+$/, '') + '.mp4'
   return new File([blob], name, { type: 'video/mp4' })
 }
