@@ -109,19 +109,13 @@ export default function LoginPage() {
         <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,.06)' }} />
         <div style={{ position: 'absolute', top: 20, left: -50, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,.05)' }} />
 
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 68, height: 68, borderRadius: '50%',
-            background: 'rgba(255,255,255,.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
-          }}>💜</div>
-
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 30, color: '#fff' }}>memora</span>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, color: 'rgba(255,255,255,.65)' }}>bebê</span>
-          </div>
-
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,.75)', fontFamily: 'var(--font-body)', textAlign: 'center' }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <img
+            src="/logo-full.png"
+            alt="Memora Bebê"
+            style={{ width: 160, height: 'auto', borderRadius: 20, boxShadow: '0 4px 24px rgba(0,0,0,.18)' }}
+          />
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', fontFamily: 'var(--font-body)', textAlign: 'center', margin: 0 }}>
             A memória emocional da infância.
           </p>
         </div>

@@ -1,21 +1,72 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import Button from '@/components/ui/Button'
 import { useApp } from '@/contexts/AppContext'
-import { getMemories } from '@/lib/supabase/queries'
-import { formatShortDate, calculateCurrentWeek, weeksUntilDue } from '@/lib/utils'
+import { getMemories, updateBaby, createMemory, unlockAchievement } from '@/lib/supabase/queries'
+import { uploadToR2 } from '@/lib/r2/upload'
+import { formatShortDate, calculateCurrentWeek, weeksUntilDue, MEMORY_COLORS } from '@/lib/utils'
 import type { Memory } from '@/types'
 
 export default function DashboardPage() {
-  const { user, baby, isLoading } = useApp()
+  const { user, baby, setBaby, isLoading } = useApp()
   const router = useRouter()
   const [recentMemory, setRecentMemory] = useState<Memory | null>(null)
   const [memoriesLoading, setMemoriesLoading] = useState(false)
+
+  // ── Nasceu modal ──────────────────────────────────────────────────────────
+  const [showNasceu, setShowNasceu] = useState(false)
+  const [nasceuDate, setNasceuDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [nasceuPhoto, setNasceuPhoto] = useState<File | null>(null)
+  const [nasceuPhotoPreview, setNasceuPhotoPreview] = useState<string | null>(null)
+  const [nasceuSaving, setNasceuSaving] = useState(false)
+  const nasceuFileRef = useRef<HTMLInputElement>(null)
+
+  function handleNasceuPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setNasceuPhoto(file)
+    setNasceuPhotoPreview(URL.createObjectURL(file))
+  }
+
+  async function handleConfirmNasceu() {
+    if (!baby?.id || !user?.id) return
+    setNasceuSaving(true)
+    try {
+      await updateBaby(baby.id, { status: 'nascido', birth_date: nasceuDate })
+      setBaby({ ...baby, status: 'nascido', birth_date: nasceuDate })
+
+      if (nasceuPhoto) {
+        const mediaUrl = await uploadToR2(nasceuPhoto, 'memories')
+        await createMemory({
+          baby_id: baby.id,
+          user_id: user.id,
+          type: 'foto',
+          title: `Nascimento de ${baby.name} 🎉`,
+          body: '',
+          life_stage: '0-1',
+          media_url: mediaUrl,
+          bg_color: MEMORY_COLORS['0-1'],
+          emoji: '🎀',
+          week: baby.week,
+        })
+        const allMems = await getMemories(baby.id)
+        if (allMems.length === 1) unlockAchievement(baby.id, user.id, 'primeira-memoria', 50).catch(() => {})
+        unlockAchievement(baby.id, user.id, 'fotografo', 150).catch(() => {})
+      }
+
+      setShowNasceu(false)
+      router.refresh()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setNasceuSaving(false)
+    }
+  }
 
   useEffect(() => {
     if (!baby?.id) return
@@ -98,6 +149,7 @@ export default function DashboardPage() {
   const isNascido = baby.status === 'nascido'
 
   return (
+    <>
     <div style={{ flex: 1, background: 'var(--surface-page)', overflowY: 'auto' }}>
       <TopBar />
 
@@ -158,7 +210,7 @@ export default function DashboardPage() {
                   <span style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', fontFamily: 'var(--font-body)' }}>semana da gestação</span>
                 </div>
                 <p style={{ fontSize: 13, color: 'rgba(255,255,255,.8)', fontFamily: 'var(--font-body)', marginTop: 4 }}>
-                  Faltam {weeksLeft} semana{weeksLeft !== 1 ? 's' : ''} para o grande dia
+                  {weeksLeft <= 0 ? 'Chegou o grande dia! 🎉' : `Faltam ${weeksLeft} semana${weeksLeft !== 1 ? 's' : ''} para o grande dia`}
                 </p>
 
                 <div style={{ marginTop: 16 }}>
@@ -170,6 +222,22 @@ export default function DashboardPage() {
                     <div style={{ height: '100%', width: `${progress}%`, background: '#fff', borderRadius: 999 }} />
                   </div>
                 </div>
+
+                {/* Botão "Nasceu" — aparece na última semana ou após a DPP */}
+                {weeksLeft <= 1 && (
+                  <button
+                    onClick={() => setShowNasceu(true)}
+                    style={{
+                      marginTop: 16, padding: '10px 20px', borderRadius: 99,
+                      background: '#fff', border: 'none', cursor: 'pointer',
+                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
+                      color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6,
+                      boxShadow: '0 2px 12px rgba(0,0,0,.15)',
+                    }}
+                  >
+                    🎉 Ele/Ela nasceu!
+                  </button>
+                )}
               </div>
 
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, flexShrink: 0 }}>
@@ -265,5 +333,75 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+
+    {/* ── Modal "Nasceu" ──────────────────────────────────────────────── */}
+
+    {showNasceu && (
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(18,17,26,.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        onClick={() => setShowNasceu(false)}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '24px 24px 0 0', padding: '28px 24px 48px', display: 'flex', flexDirection: 'column', gap: 20 }}
+        >
+          <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)', alignSelf: 'center' }} />
+
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>🎉</div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--text-strong)', margin: '0 0 6px' }}>
+              Ele/Ela nasceu!
+            </h2>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0 }}>
+              Registre este momento incrível 💜
+            </p>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 8 }}>
+              Data de nascimento
+            </label>
+            <input
+              type="date"
+              value={nasceuDate}
+              onChange={e => setNasceuDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border-strong)', borderRadius: 12, fontSize: 15, fontFamily: 'var(--font-body)', color: 'var(--text-strong)', background: '#fff', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 8 }}>
+              Primeira foto <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(opcional)</span>
+            </label>
+            <input ref={nasceuFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleNasceuPhotoChange} />
+            {nasceuPhotoPreview ? (
+              <div style={{ position: 'relative', width: '100%', height: 160, borderRadius: 14, overflow: 'hidden', background: '#000' }}>
+                <img src={nasceuPhotoPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <button
+                  onClick={() => { setNasceuPhoto(null); setNasceuPhotoPreview(null) }}
+                  style={{ position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Icon name="x" size={16} color="#fff" strokeWidth={2.5} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => nasceuFileRef.current?.click()}
+                style={{ width: '100%', height: 100, borderRadius: 14, border: '2px dashed var(--border-strong)', background: 'var(--violet-50)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer' }}
+              >
+                <Icon name="camera" size={24} color="var(--accent)" />
+                <span style={{ fontSize: 14, color: 'var(--accent)', fontFamily: 'var(--font-body)', fontWeight: 600 }}>Adicionar foto</span>
+              </button>
+            )}
+          </div>
+
+          <Button fullWidth size="lg" onClick={handleConfirmNasceu} loading={nasceuSaving}>
+            Confirmar nascimento 🎀
+          </Button>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
