@@ -54,6 +54,10 @@ export default function PerfilPage() {
   const [editAbout, setEditAbout] = useState(baby?.about ?? '')
   const [editBirthDate, setEditBirthDate] = useState(baby?.birth_date ?? '')
   const [saving, setSaving] = useState(false)
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [photoUrl, setPhotoUrl] = useState(baby?.photo_url ?? '')
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false)
   const signedPhotoUrl = useSignedUrl(photoUrl || null)
@@ -104,6 +108,24 @@ export default function PerfilPage() {
       console.error(err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const res = await fetch('/api/delete-account', { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok || json.error) {
+        setDeleteError(json.error || 'Erro ao deletar conta.')
+        setDeleting(false)
+        return
+      }
+      window.location.replace('/login')
+    } catch {
+      setDeleteError('Erro ao deletar conta. Tente novamente.')
+      setDeleting(false)
     }
   }
 
@@ -260,8 +282,8 @@ export default function PerfilPage() {
         ))}
       </div>
 
-      {/* Logout */}
-      <div style={{ padding: '20px 20px 32px' }}>
+      {/* Logout + Delete account */}
+      <div style={{ padding: '20px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button
           onClick={logout}
           style={{ width: '100%', padding: '14px', border: '1.5px solid #E7E5F0', borderRadius: 14, background: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 15, color: '#8B89B0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
@@ -269,7 +291,53 @@ export default function PerfilPage() {
           <Icon name="log-out" size={18} color="#8B89B0" />
           Sair da conta
         </button>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          style={{ width: '100%', padding: '14px', border: '1.5px solid #FECACA', borderRadius: 14, background: '#FFF5F5', fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 14, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        >
+          <Icon name="trash" size={16} color="#EF4444" />
+          Deletar conta
+        </button>
       </div>
+
+      {/* Delete account modal */}
+      {showDeleteModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(18,17,26,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }}
+          onClick={() => { if (!deleting) setShowDeleteModal(false) }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 24, padding: '28px 24px', width: '100%', maxWidth: 360 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: '50%', background: '#FEE2E2', margin: '0 auto 16px' }}>
+              <Icon name="trash" size={26} color="#EF4444" />
+            </div>
+            <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 18, color: '#2E2C4A', margin: '0 0 8px', textAlign: 'center' }}>Deletar conta?</p>
+            <p style={{ fontSize: 14, color: '#8B89B0', fontFamily: 'Inter, sans-serif', margin: '0 0 8px', textAlign: 'center', lineHeight: 1.5 }}>
+              Todas as memórias, fotos e dados serão <strong>apagados permanentemente</strong>. Esta ação não pode ser desfeita.
+            </p>
+            {deleteError && (
+              <p style={{ fontSize: 13, color: '#EF4444', textAlign: 'center', margin: '0 0 8px' }}>{deleteError}</p>
+            )}
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteError('') }}
+                disabled={deleting}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid #E7E5F0', background: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#8B89B0', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#EF4444', fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 14, color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: deleting ? 0.7 : 1 }}
+              >
+                {deleting
+                  ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                  : 'Sim, deletar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

@@ -105,9 +105,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('[AppContext] logout error:', err)
     } finally {
-      setUser(null)
-      setBaby(null)
-      setPlan('free')
+      window.location.replace('/login')
     }
   }, [])
 
