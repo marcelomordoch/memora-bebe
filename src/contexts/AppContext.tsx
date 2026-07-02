@@ -45,9 +45,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUser(appUser)
       setPlan(appUser.plan)
 
-      // Buscar bebê
+      // Buscar bebê — não sobrescreve um baby temporário do wizard (id vazio)
       const babyData = await getBaby(authUser.id)
-      setBaby(babyData)
+      setBaby(prev => {
+        if (babyData) return babyData
+        if (prev && prev.id === '') return prev  // wizard em andamento
+        return null
+      })
     } catch (err) {
       console.error('[AppContext] loadUserData error:', err)
     } finally {
