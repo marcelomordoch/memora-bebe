@@ -96,7 +96,7 @@ export default function DashboardPage() {
     <div style={{ background: '#fff', paddingBottom: 0 }}>
       <StatusBar />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 16px' }}>
-        <img src="/logo-full.png" alt="Memora Bebê" style={{ height: 44, width: 'auto' }} />
+        <img src="/logo-horizontal.png" alt="Memora Bebê" style={{ height: 36, width: 'auto' }} />
         <Link href="/notificacoes" style={{ position: 'relative', textDecoration: 'none', display: 'flex' }}>
           <Icon name="bell" size={22} color="var(--text-strong)" />
           <div style={{ position: 'absolute', top: -2, right: -2, width: 8, height: 8, borderRadius: '50%', background: '#E05050', border: '1.5px solid white' }} />
