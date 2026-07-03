@@ -32,7 +32,7 @@ export interface Memory {
   media_url?: string
   media_urls?: string[]
   week?: number
-  life_stage: 'gestacao' | '0-1' | '1-3' | 'escola'
+  life_stage: string
   emoji?: string
   bg_color?: string
   likes_count: number

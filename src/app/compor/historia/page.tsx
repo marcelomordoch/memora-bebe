@@ -6,18 +6,9 @@ import StatusBar from '@/components/ui/StatusBar';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import Button from '@/components/ui/Button';
 import AppShell from '@/components/layout/AppShell';
-import { MEMORY_EMOJIS, MEMORY_COLORS } from '@/lib/utils';
+import { MEMORY_EMOJIS, MEMORY_COLORS, getLifeStage } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import { createMemory, unlockAchievement, getMemories } from '@/lib/supabase/queries';
-
-type LifeStage = 'gestacao' | '0-1' | '1-3' | 'escola';
-
-const STAGE_OPTIONS: { value: LifeStage; label: string }[] = [
-  { value: 'gestacao', label: 'Gestação' },
-  { value: '0-1', label: '0-1 ano' },
-  { value: '1-3', label: '1-3 anos' },
-  { value: 'escola', label: 'Escola' },
-];
 
 function HistoriaContent() {
   const router = useRouter();
@@ -25,14 +16,15 @@ function HistoriaContent() {
   const promptParam = searchParams.get('prompt') ?? '';
   const { user, baby } = useApp();
 
-  const [stage, setStage] = useState<LifeStage>('gestacao');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const emojis: string[] = MEMORY_EMOJIS[stage] ?? [];
+  // Stage is computed from the current moment vs baby's birth date
+  const stage = getLifeStage(new Date().toISOString(), baby?.birth_date)
+  const emojis: string[] = MEMORY_EMOJIS[stage] ?? MEMORY_EMOJIS['ano-1'] ?? [];
 
   const handleSave = async () => {
     if (!title.trim() || !body.trim()) { setError('Preencha o título e o conteúdo.'); return }
@@ -48,16 +40,14 @@ function HistoriaContent() {
         body: body.trim(),
         life_stage: stage,
         emoji: selectedEmoji ?? undefined,
-        bg_color: MEMORY_COLORS[stage],
+        bg_color: MEMORY_COLORS[stage] ?? MEMORY_COLORS['ano-1'],
         week: baby.week,
       })
 
-      // Desbloquear conquista "primeira-memoria" na primeira memória
       const allMemories = await getMemories(baby.id)
       if (allMemories.length <= 1) {
         await unlockAchievement(baby.id, user.id, 'primeira-memoria', 50).catch(() => {})
       }
-      // Desbloquear "escritor" após 10 memórias
       if (allMemories.length >= 10) {
         await unlockAchievement(baby.id, user.id, 'escritor', 200).catch(() => {})
       }
@@ -76,31 +66,6 @@ function HistoriaContent() {
       <ScreenHeader title="Nova História" onBack={() => router.back()} />
 
       <div style={{ padding: '0 16px 40px' }}>
-        {/* Stage chips */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 22, overflowX: 'auto', paddingBottom: 4 }}>
-          {STAGE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => { setStage(opt.value); setSelectedEmoji(null); }}
-              style={{
-                padding: '7px 16px',
-                borderRadius: 30,
-                border: stage === opt.value ? '2px solid #6B53AE' : '2px solid #E7E5F0',
-                background: stage === opt.value ? '#6B53AE' : '#fff',
-                color: stage === opt.value ? '#fff' : '#8B89B0',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s',
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
         {/* Title input */}
         <input
           type="text"

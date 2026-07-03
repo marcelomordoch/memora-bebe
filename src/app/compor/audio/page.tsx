@@ -9,7 +9,7 @@ import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
 import { createMemory, unlockAchievement, getMemories } from '@/lib/supabase/queries'
 import { uploadToR2 } from '@/lib/r2/upload'
-import { MEMORY_COLORS } from '@/lib/utils'
+import { MEMORY_COLORS, getLifeStage } from '@/lib/utils'
 
 type RecState = 'idle' | 'recording' | 'paused' | 'done'
 
@@ -175,7 +175,7 @@ export default function AudioPage() {
     setSaving(true)
     setError('')
     try {
-      const lifeStage = baby.status === 'gestacao' ? 'gestacao' : '0-1'
+      const lifeStage = getLifeStage(new Date().toISOString(), baby.birth_date)
       const ext = audioBlob.type.includes('webm') ? 'webm' : 'ogg'
       const file = new File([audioBlob], `audio_${Date.now()}.${ext}`, { type: audioBlob.type })
       const mediaUrl = await uploadToR2(file, 'audio')
@@ -187,7 +187,7 @@ export default function AudioPage() {
         body: '',
         life_stage: lifeStage,
         media_url: mediaUrl,
-        bg_color: MEMORY_COLORS[lifeStage],
+        bg_color: MEMORY_COLORS[lifeStage] ?? MEMORY_COLORS['ano-1'],
         emoji: '🎙️',
         week: baby.week,
       })

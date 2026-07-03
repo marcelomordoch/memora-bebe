@@ -5,35 +5,28 @@ import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
 import { getMemories, toggleLike, deleteMemory } from '@/lib/supabase/queries'
-import { formatDate, formatShortDate } from '@/lib/utils'
+import { formatDate, formatShortDate, getLifeStage, lifeStageLabel, babyAgeAtMemory } from '@/lib/utils'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import type { Memory } from '@/types'
-
-// ─── Filter chips ────────────────────────────────────────────────────────────
-
-const FILTERS = [
-  { label: 'Todas',     value: 'all' },
-  { label: 'Gestação',  value: 'gestacao' },
-  { label: '0–1 ano',   value: '0-1' },
-  { label: '1–3 anos',  value: '1-3' },
-  { label: 'Escola',    value: 'escola' },
-]
 
 // ─── ImageViewer overlay ─────────────────────────────────────────────────────
 
 function ImageViewer({
   memory,
+  birthDate,
   onClose,
   onToggleLike,
   onDelete,
   isOwner,
 }: {
   memory: Memory
+  birthDate: string | undefined
   onClose: () => void
   onToggleLike: (id: string) => void
   onDelete: (id: string) => void
   isOwner: boolean
 }) {
+  const ageLabel = babyAgeAtMemory(memory.created_at, birthDate)
   const liked = memory.liked_by_me
   const count = memory.likes_count
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -167,10 +160,11 @@ function ImageViewer({
           <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
         </div>
 
-        {/* Date */}
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-          {formatDate(memory.created_at)}
-        </p>
+        {/* Date + age */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{formatDate(memory.created_at)}</p>
+          {ageLabel && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'var(--violet-50)', borderRadius: 999, padding: '2px 9px' }}>{ageLabel}</span>}
+        </div>
 
         {/* Title */}
         <h2
@@ -263,16 +257,19 @@ function ImageViewer({
 
 function MemoryCard({
   memory,
+  birthDate,
   onOpen,
   onToggleLike,
 }: {
   memory: Memory
+  birthDate: string | undefined
   onOpen: () => void
   onToggleLike: (id: string) => void
 }) {
   const liked = memory.liked_by_me
   const count = memory.likes_count
   const signedMediaUrl = useSignedUrl(memory.media_url)
+  const ageLabel = babyAgeAtMemory(memory.created_at, birthDate)
 
   function handleLike(e: React.MouseEvent) {
     e.stopPropagation()
@@ -326,7 +323,10 @@ function MemoryCard({
               <Icon name="heart" size={15} color={liked ? '#C76FB0' : 'var(--border-strong)'} strokeWidth={liked ? 0 : 2} />
             </button>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: 'var(--text-strong)', margin: 0, paddingRight: 36, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{memory.title}</p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{formatShortDate(memory.created_at)}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{formatShortDate(memory.created_at)}</p>
+              {ageLabel && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--violet-50)', borderRadius: 999, padding: '1px 7px' }}>{ageLabel}</span>}
+            </div>
             {memory.body && (
               <p style={{ fontSize: 13, color: 'var(--text-body)', margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowY: 'auto', maxHeight: 60 }}>{memory.body}</p>
             )}
@@ -351,7 +351,10 @@ function MemoryCard({
               <Icon name="heart" size={16} color={liked ? '#C76FB0' : 'var(--border-strong)'} strokeWidth={liked ? 0 : 2} />
             </button>
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: 'var(--text-strong)', margin: 0, paddingRight: 40, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{memory.title}</p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{formatShortDate(memory.created_at)}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{formatShortDate(memory.created_at)}</p>
+              {ageLabel && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--violet-50)', borderRadius: 999, padding: '1px 7px' }}>{ageLabel}</span>}
+            </div>
             <p style={{ fontSize: 13, color: 'var(--text-body)', margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{memory.body}</p>
             {/* Footer */}
             <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -393,10 +396,30 @@ export default function MemoriasPage() {
     fetchMemories()
   }, [fetchMemories])
 
-  // Client-side filter
+  // Compute life stage for every memory based on birth_date
+  const memoriesWithStage = allMemories.map(m => ({
+    ...m,
+    _stage: getLifeStage(m.created_at, baby?.birth_date),
+  }))
+
+  // Build dynamic filter list from stages that actually have memories,
+  // sorted chronologically: gestacao first, then ano-1, ano-2, ...
+  const stagesPresent = Array.from(new Set(memoriesWithStage.map(m => m._stage)))
+    .sort((a, b) => {
+      if (a === 'gestacao') return -1
+      if (b === 'gestacao') return 1
+      return parseInt(a.slice(4)) - parseInt(b.slice(4))
+    })
+
+  const FILTERS = [
+    { label: 'Todas', value: 'all' },
+    ...stagesPresent.map(s => ({ label: lifeStageLabel(s), value: s })),
+  ]
+
+  // Client-side filter using computed stage
   const filtered = activeFilter === 'all'
-    ? allMemories
-    : allMemories.filter(m => m.life_stage === activeFilter)
+    ? memoriesWithStage
+    : memoriesWithStage.filter(m => m._stage === activeFilter)
 
   // Toggle like — optimistic update then sync with DB
   async function handleToggleLike(memoryId: string) {
@@ -534,6 +557,7 @@ export default function MemoriasPage() {
               <MemoryCard
                 key={m.id}
                 memory={m}
+                birthDate={baby?.birth_date}
                 onOpen={() => setSelected(m)}
                 onToggleLike={handleToggleLike}
               />
@@ -546,6 +570,7 @@ export default function MemoriasPage() {
       {selected && (
         <ImageViewer
           memory={selected}
+          birthDate={baby?.birth_date}
           onClose={() => setSelected(null)}
           onToggleLike={handleToggleLike}
           isOwner={selected.user_id === user?.id}

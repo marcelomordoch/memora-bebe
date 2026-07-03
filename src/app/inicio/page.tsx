@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button'
 import { useApp } from '@/contexts/AppContext'
 import { getMemories, updateBaby, createMemory, unlockAchievement } from '@/lib/supabase/queries'
 import { uploadToR2 } from '@/lib/r2/upload'
-import { formatShortDate, calculateCurrentWeek, weeksUntilDue, MEMORY_COLORS, formatLocalDate } from '@/lib/utils'
+import { formatShortDate, calculateCurrentWeek, weeksUntilDue, MEMORY_COLORS, formatLocalDate, getLifeStage } from '@/lib/utils'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import type { Memory } from '@/types'
 
@@ -50,9 +50,9 @@ export default function DashboardPage() {
           type: 'foto',
           title: `Nascimento de ${baby.name} 🎉`,
           body: '',
-          life_stage: '0-1',
+          life_stage: getLifeStage(new Date().toISOString(), baby.birth_date),
           media_url: mediaUrl,
-          bg_color: MEMORY_COLORS['0-1'],
+          bg_color: MEMORY_COLORS[getLifeStage(new Date().toISOString(), baby.birth_date)] ?? MEMORY_COLORS['ano-1'],
           emoji: '🎀',
           week: baby.week,
         })

@@ -11,7 +11,7 @@ import { useApp } from '@/contexts/AppContext'
 import { createMemory, unlockAchievement, getMemories } from '@/lib/supabase/queries'
 import { uploadToR2 } from '@/lib/r2/upload'
 import { compressVideo } from '@/lib/r2/compress-video'
-import { MEMORY_COLORS } from '@/lib/utils'
+import { MEMORY_COLORS, getLifeStage } from '@/lib/utils'
 
 // ── Upgrade modal ──────────────────────────────────────────────────────────────
 function UpgradeModal({ onClose }: { onClose: () => void }) {
@@ -89,7 +89,7 @@ function MediaForm({
     setError('')
     setSubmitting(true)
     try {
-      const lifeStage = baby.status === 'gestacao' ? 'gestacao' : '0-1'
+      const lifeStage = getLifeStage(new Date().toISOString(), baby.birth_date)
       const folder = isPhoto ? 'memories' : 'videos'
 
       // Compress video before upload (photos are compressed inside uploadToR2)
