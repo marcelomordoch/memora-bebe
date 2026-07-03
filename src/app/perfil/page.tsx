@@ -8,6 +8,7 @@ import { useApp } from '@/contexts/AppContext'
 import { getAchievements, getFamilyMembers, uploadBabyPhoto, updateBaby } from '@/lib/supabase/queries'
 import { calculateCurrentWeek, formatLocalDate } from '@/lib/utils'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
+import InstallButton from '@/components/ui/InstallButton'
 
 const links = [
   {
@@ -282,8 +283,9 @@ export default function PerfilPage() {
         ))}
       </div>
 
-      {/* Logout + Delete account */}
+      {/* Install app + Logout + Delete account */}
       <div style={{ padding: '20px 20px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <InstallButton />
         <button
           onClick={logout}
           style={{ width: '100%', padding: '14px', border: '1.5px solid #E7E5F0', borderRadius: 14, background: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 15, color: '#8B89B0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
