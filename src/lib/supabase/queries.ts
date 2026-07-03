@@ -3,12 +3,69 @@ import { uploadToR2 } from '@/lib/r2/upload'
 import type { Baby, Memory, FamilyMember, FutureMessage, GiftCard, Notification, Achievement } from '@/types'
 
 const ACHIEVEMENTS_LIST: Omit<Achievement, 'unlocked' | 'unlocked_at'>[] = [
-  { id: 'primeira-memoria',  title: 'Primeira Memória',     description: 'Registrou sua primeira memória',           xp: 50,  icon: 'star'      },
-  { id: 'narrador',          title: 'Narrador(a)',          description: 'Gravou seu primeiro áudio',                xp: 100, icon: 'mic'       },
-  { id: 'escritor',          title: 'Escritor(a)',          description: 'Registrou 10 memórias',                    xp: 200, icon: 'file-text' },
-  { id: 'fotografo',         title: 'Fotógrafo(a)',         description: 'Adicionou 5 fotos',                        xp: 150, icon: 'camera'    },
-  { id: 'mensagem-tempo',    title: 'Mensagem no Tempo',    description: 'Criou uma mensagem para o futuro',         xp: 250, icon: 'clock'     },
-  { id: 'marco-mes',         title: 'Marco do Mês',         description: 'Registrou memórias por 30 dias seguidos',  xp: 500, icon: 'award'     },
+  // Memórias
+  { id: 'primeira-memoria',   title: 'Primeira Memória',        description: 'Registrou sua primeira memória',              xp: 50,   icon: 'star'       },
+  { id: 'cinco-memorias',     title: 'Cinco Memórias',          description: 'Registrou 5 memórias',                        xp: 100,  icon: 'book'       },
+  { id: 'escritor',           title: 'Escritor(a)',             description: 'Registrou 10 memórias',                       xp: 200,  icon: 'file-text'  },
+  { id: 'vinte-memorias',     title: 'Historiador(a)',          description: 'Registrou 20 memórias',                       xp: 300,  icon: 'book-open'  },
+  { id: 'cinquenta-memorias', title: 'Cronista',                description: 'Registrou 50 memórias',                       xp: 500,  icon: 'layers'     },
+  { id: 'cem-memorias',       title: 'Guardião(ã) do Tempo',   description: 'Registrou 100 memórias',                      xp: 1000, icon: 'archive'    },
+  // Fotos
+  { id: 'primeira-foto',      title: 'Primeiro Clique',         description: 'Registrou a primeira foto',                   xp: 75,   icon: 'image'      },
+  { id: 'fotografo',          title: 'Fotógrafo(a)',            description: 'Adicionou 5 fotos',                           xp: 150,  icon: 'camera'     },
+  { id: 'dez-fotos',          title: 'Álbum Especial',          description: 'Registrou 10 fotos',                          xp: 200,  icon: 'image'      },
+  { id: 'trinta-fotos',       title: 'Fotógrafo(a) Pro',        description: 'Registrou 30 fotos',                          xp: 400,  icon: 'camera'     },
+  // Áudios
+  { id: 'narrador',           title: 'Narrador(a)',             description: 'Gravou o primeiro áudio',                     xp: 100,  icon: 'mic'        },
+  { id: 'cinco-audios',       title: 'Locutor(a)',              description: 'Gravou 5 áudios',                             xp: 250,  icon: 'mic'        },
+  // Vídeos
+  { id: 'primeiro-video',     title: 'Diretor(a)',              description: 'Gravou o primeiro vídeo',                     xp: 100,  icon: 'video'      },
+  { id: 'cinco-videos',       title: 'Cineasta',                description: 'Gravou 5 vídeos',                             xp: 250,  icon: 'film'       },
+  // Histórias
+  { id: 'primeira-historia',  title: 'Contador(a) de Histórias', description: 'Escreveu a primeira história',              xp: 75,   icon: 'pen-line'   },
+  { id: 'memoria-detalhada',  title: 'Detalhista',              description: 'Escreveu memória com mais de 300 palavras',   xp: 150,  icon: 'edit'       },
+  // Sequências
+  { id: 'semana-seguida',     title: 'Semana de Ouro',          description: 'Registrou memórias por 7 dias seguidos',      xp: 300,  icon: 'calendar'   },
+  { id: 'marco-mes',          title: 'Marco do Mês',            description: 'Registrou memórias por 30 dias seguidos',     xp: 500,  icon: 'award'      },
+  { id: 'tres-meses',         title: 'Constância Total',        description: 'Registrou memórias por 3 meses seguidos',     xp: 750,  icon: 'trophy'     },
+  { id: 'albumzinho',         title: 'Álbum Completo',          description: 'Criou todos os tipos de memória (foto, vídeo, áudio e história)', xp: 400, icon: 'package' },
+  // Família
+  { id: 'primeiro-membro',    title: 'Família Presente',        description: 'Convidou o primeiro familiar',                xp: 100,  icon: 'users'      },
+  { id: 'familia-unida',      title: 'Família Unida',           description: 'Convidou 3 familiares',                       xp: 250,  icon: 'users'      },
+  { id: 'grande-familia',     title: 'Grande Família',          description: 'Convidou 5 familiares',                       xp: 400,  icon: 'users'      },
+  { id: 'familia-completa',   title: 'Família Completa',        description: 'Convidou 10 ou mais familiares',              xp: 750,  icon: 'home'       },
+  { id: 'voz-familia',        title: 'Vozes da Família',        description: '3 familiares participaram ativamente',        xp: 300,  icon: 'message-circle' },
+  { id: 'raizes-vivas',       title: 'Raízes Vivas',            description: '5 familiares participaram ativamente',        xp: 500,  icon: 'heart'      },
+  // Mensagens do futuro
+  { id: 'mensagem-tempo',     title: 'Mensagem no Tempo',       description: 'Criou uma mensagem para o futuro',            xp: 250,  icon: 'clock'      },
+  { id: 'tres-mensagens',     title: 'Viajante do Tempo',       description: 'Criou 3 mensagens para o futuro',             xp: 400,  icon: 'clock'      },
+  { id: 'cinco-mensagens',    title: 'Oráculo',                 description: 'Criou 5 mensagens para o futuro',             xp: 600,  icon: 'clock'      },
+  { id: 'mensagem-1-ano',     title: 'Para Meu Bebê de 1 Ano',  description: 'Escreveu mensagem para os 12 meses de idade', xp: 200,  icon: 'gift'       },
+  { id: 'mensagem-18-anos',   title: 'Para a Vida Adulta',      description: 'Escreveu mensagem para os 18 anos',           xp: 300,  icon: 'gift'       },
+  { id: 'mensagem-formatura', title: 'Para a Formatura',        description: 'Escreveu mensagem para a formatura',          xp: 300,  icon: 'book'       },
+  // Marcos de vida
+  { id: 'primeiro-mes',       title: 'Primeiro Mês!',           description: 'Registrou o primeiro mês de vida',            xp: 100,  icon: 'calendar'   },
+  { id: 'seis-meses-vida',    title: 'Seis Meses de Alegria',   description: 'Celebrou 6 meses de vida',                   xp: 200,  icon: 'star'       },
+  { id: 'primeiro-ano',       title: 'Feliz 1 Ano!',            description: 'Celebrou o primeiro aniversário',             xp: 500,  icon: 'gift'       },
+  { id: 'segundo-ano',        title: 'Feliz 2 Anos!',           description: 'Celebrou o segundo aniversário',              xp: 600,  icon: 'gift'       },
+  { id: 'terceiro-ano',       title: 'Feliz 3 Anos!',           description: 'Celebrou o terceiro aniversário',             xp: 800,  icon: 'gift'       },
+  { id: 'quinto-ano',         title: 'Feliz 5 Anos!',           description: 'Celebrou o quinto aniversário',               xp: 1000, icon: 'award'      },
+  // Marcos do bebê
+  { id: 'primeiros-passos',   title: 'Primeiros Passinhos',     description: 'Registrou os primeiros passos',               xp: 300,  icon: 'heart'      },
+  { id: 'primeira-palavra',   title: 'Primeira Palavra',        description: 'Registrou a primeira palavrinha',             xp: 300,  icon: 'message-circle' },
+  { id: 'primeiro-sorriso',   title: 'Primeiro Sorriso',        description: 'Registrou o primeiro sorriso',                xp: 200,  icon: 'heart'      },
+  { id: 'primeiro-dente',     title: 'Dentinho!',               description: 'Registrou o primeiro dentinho',               xp: 200,  icon: 'star'       },
+  { id: 'primeiro-natal',     title: 'Primeiro Natal',          description: 'Registrou o Natal do bebê',                  xp: 300,  icon: 'gift'       },
+  // Perfil e app
+  { id: 'perfil-completo',    title: 'Perfil Completo',         description: 'Completou o perfil do bebê',                 xp: 150,  icon: 'user'       },
+  { id: 'foto-perfil',        title: 'Rosto do Amor',           description: 'Adicionou foto de perfil do bebê',            xp: 100,  icon: 'user'       },
+  { id: 'explorador',         title: 'Explorador(a)',           description: 'Explorou todas as seções do app',             xp: 200,  icon: 'map'        },
+  // XP milestones
+  { id: 'guardiao-memorias',  title: 'Guardião(ã) das Memórias', description: 'Acumulou 1.000 XP',                        xp: 300,  icon: 'shield'     },
+  { id: 'lenda-viva',         title: 'Lenda Viva',              description: 'Acumulou 5.000 XP',                          xp: 1000, icon: 'zap'        },
+  { id: 'madrugada-amor',     title: 'Madrugada de Amor',       description: 'Registrou uma memória de madrugada',         xp: 150,  icon: 'moon'       },
+  { id: 'presente-eterno',    title: 'Presente Eterno',         description: 'Acumulou 10.000 XP',                         xp: 500,  icon: 'gift'       },
+  { id: 'arvore-plena',       title: 'Árvore Plena',            description: 'Atingiu o Nível 50 na Árvore da Vida',       xp: 0,    icon: 'tree-pine'  },
 ]
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────

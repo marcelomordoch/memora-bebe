@@ -12,19 +12,78 @@ import type { Achievement } from '@/types'
 type Tab = 'todas' | 'alcancadas' | 'em-breve'
 
 const ACHIEVEMENT_ACTIONS: Record<string, { href: string; label: string }> = {
-  'primeira-memoria': { href: '/compor/historia', label: 'Escrever primeira memória' },
-  'narrador':         { href: '/compor/audio',    label: 'Gravar um áudio' },
-  'escritor':         { href: '/memorias',        label: 'Ver minhas memórias' },
-  'fotografo':        { href: '/compor',          label: 'Adicionar foto' },
-  'mensagem-tempo':   { href: '/perfil/mensagens', label: 'Criar mensagem para o futuro' },
-  'marco-mes':        { href: '/memorias',        label: 'Continue registrando' },
+  'primeira-memoria':   { href: '/compor/historia',  label: 'Escrever primeira memória' },
+  'cinco-memorias':     { href: '/compor/historia',  label: 'Escrever mais memórias' },
+  'escritor':           { href: '/memorias',         label: 'Ver minhas memórias' },
+  'vinte-memorias':     { href: '/compor',           label: 'Registrar nova memória' },
+  'cinquenta-memorias': { href: '/compor',           label: 'Registrar nova memória' },
+  'cem-memorias':       { href: '/compor',           label: 'Registrar nova memória' },
+  'primeira-foto':      { href: '/compor',           label: 'Adicionar primeira foto' },
+  'fotografo':          { href: '/compor',           label: 'Adicionar foto' },
+  'dez-fotos':          { href: '/compor',           label: 'Adicionar foto' },
+  'trinta-fotos':       { href: '/compor',           label: 'Adicionar foto' },
+  'narrador':           { href: '/compor/audio',     label: 'Gravar um áudio' },
+  'cinco-audios':       { href: '/compor/audio',     label: 'Gravar mais áudios' },
+  'primeiro-video':     { href: '/compor',           label: 'Gravar primeiro vídeo' },
+  'cinco-videos':       { href: '/compor',           label: 'Gravar mais vídeos' },
+  'primeira-historia':  { href: '/compor/historia',  label: 'Escrever história' },
+  'memoria-detalhada':  { href: '/compor/historia',  label: 'Escrever história longa' },
+  'semana-seguida':     { href: '/compor',           label: 'Registrar memória hoje' },
+  'marco-mes':          { href: '/memorias',         label: 'Continue registrando' },
+  'tres-meses':         { href: '/compor',           label: 'Mantenha a sequência' },
+  'albumzinho':         { href: '/compor',           label: 'Completar o álbum' },
+  'primeiro-membro':    { href: '/perfil',           label: 'Convidar familiar' },
+  'familia-unida':      { href: '/perfil',           label: 'Convidar mais familiares' },
+  'grande-familia':     { href: '/perfil',           label: 'Convidar mais familiares' },
+  'familia-completa':   { href: '/perfil',           label: 'Convidar a família toda' },
+  'voz-familia':        { href: '/perfil',           label: 'Engajar familiares' },
+  'raizes-vivas':       { href: '/perfil',           label: 'Engajar familiares' },
+  'mensagem-tempo':     { href: '/perfil/mensagens', label: 'Criar mensagem para o futuro' },
+  'tres-mensagens':     { href: '/perfil/mensagens', label: 'Criar mais mensagens' },
+  'cinco-mensagens':    { href: '/perfil/mensagens', label: 'Criar mais mensagens' },
+  'mensagem-1-ano':     { href: '/perfil/mensagens', label: 'Escrever para 1 ano de idade' },
+  'mensagem-18-anos':   { href: '/perfil/mensagens', label: 'Escrever para os 18 anos' },
+  'mensagem-formatura': { href: '/perfil/mensagens', label: 'Escrever para a formatura' },
+  'primeiro-mes':       { href: '/compor/historia',  label: 'Registrar o 1º mês' },
+  'seis-meses-vida':    { href: '/compor/historia',  label: 'Registrar os 6 meses' },
+  'primeiro-ano':       { href: '/compor/historia',  label: 'Registrar o 1º aniversário' },
+  'segundo-ano':        { href: '/compor/historia',  label: 'Registrar o 2º aniversário' },
+  'terceiro-ano':       { href: '/compor/historia',  label: 'Registrar o 3º aniversário' },
+  'quinto-ano':         { href: '/compor/historia',  label: 'Registrar o 5º aniversário' },
+  'primeiros-passos':   { href: '/compor/historia',  label: 'Registrar os primeiros passos' },
+  'primeira-palavra':   { href: '/compor/historia',  label: 'Registrar a primeira palavra' },
+  'primeiro-sorriso':   { href: '/compor',           label: 'Registrar o primeiro sorriso' },
+  'primeiro-dente':     { href: '/compor/historia',  label: 'Registrar o primeiro dentinho' },
+  'primeiro-natal':     { href: '/compor/historia',  label: 'Registrar o Natal' },
+  'perfil-completo':    { href: '/perfil',           label: 'Completar perfil do bebê' },
+  'foto-perfil':        { href: '/perfil',           label: 'Adicionar foto de perfil' },
+  'explorador':         { href: '/inicio',           label: 'Explorar o app' },
 }
 
+// XP thresholds for levels 1-50; gap increases by 50 every 5 levels
+const XP_THRESHOLDS = [
+  0, 100, 200, 300, 400,               // 1-5   (gap 100)
+  550, 700, 850, 1000, 1150,           // 6-10  (gap 150)
+  1350, 1550, 1750, 1950, 2150,        // 11-15 (gap 200)
+  2400, 2650, 2900, 3150, 3400,        // 16-20 (gap 250)
+  3700, 4000, 4300, 4600, 4900,        // 21-25 (gap 300)
+  5250, 5600, 5950, 6300, 6650,        // 26-30 (gap 350)
+  7050, 7450, 7850, 8250, 8650,        // 31-35 (gap 400)
+  9100, 9550, 10000, 10450, 10900,     // 36-40 (gap 450)
+  11400, 11900, 12400, 12900, 13400,   // 41-45 (gap 500)
+  14000, 14600, 15200, 15800, 16400,   // 46-50 (gap 600)
+]
+
 function levelFromXP(xp: number) {
-  if (xp >= 601) return { level: 4, label: 'Nível 4', progress: 100, detail: 'Nível máximo!' }
-  if (xp >= 301) return { level: 3, label: 'Nível 3', progress: Math.round(((xp-301)/300)*100), detail: `${xp}/600 XP` }
-  if (xp >= 101) return { level: 2, label: 'Nível 2', progress: Math.round(((xp-101)/200)*100), detail: `${xp}/300 XP` }
-  return           { level: 1, label: 'Nível 1', progress: Math.round((xp/100)*100), detail: `${xp}/100 XP` }
+  let level = 1
+  for (let i = XP_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (xp >= XP_THRESHOLDS[i]) { level = i + 1; break }
+  }
+  const curr = XP_THRESHOLDS[level - 1]
+  const next = level < 50 ? XP_THRESHOLDS[level] : null
+  const progress = next ? Math.min(100, Math.round(((xp - curr) / (next - curr)) * 100)) : 100
+  const detail = next ? `${xp}/${next} XP` : 'Nível máximo!'
+  return { level, label: `Nível ${level}`, progress, detail }
 }
 
 export default function ConquistasPage() {
