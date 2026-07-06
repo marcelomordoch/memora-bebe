@@ -52,6 +52,8 @@ export default function RegisterPage() {
         email: authUser.email ?? email,
         name,
         plan: 'free',
+        storage_plan: 'free',
+        storage_limit_gb: 1,
         created_at: authUser.created_at,
       })
 

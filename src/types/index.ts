@@ -5,6 +5,8 @@ export interface User {
   email: string
   name: string
   plan: Plan
+  storage_plan: string
+  storage_limit_gb: number
   created_at: string
 }
 
@@ -38,6 +40,7 @@ export interface Memory {
   likes_count: number
   created_at: string
   liked_by_me?: boolean
+  file_size_bytes?: number
 }
 
 export interface FamilyMember {

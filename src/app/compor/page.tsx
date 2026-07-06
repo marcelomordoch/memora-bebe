@@ -106,7 +106,7 @@ function MediaForm({
       }
 
       // Upload todos os arquivos em paralelo, direto para o R2
-      const urls = await Promise.all(
+      const results = await Promise.all(
         filesToUpload.map(async f => {
           try {
             return await uploadToR2(f, folder)
@@ -116,6 +116,8 @@ function MediaForm({
           }
         })
       )
+      const urls = results.map(r => r.url)
+      const totalBytes = results.reduce((s, r) => s + r.sizeBytes, 0)
 
       // Criar memória com a primeira URL como media_url e o array completo em media_urls
       await createMemory({
@@ -129,6 +131,7 @@ function MediaForm({
         media_urls: urls.length > 1 ? urls : undefined,
         bg_color: MEMORY_COLORS[lifeStage],
         week: baby.week,
+        file_size_bytes: totalBytes,
       } as Parameters<typeof createMemory>[0])
 
       // Conquistas

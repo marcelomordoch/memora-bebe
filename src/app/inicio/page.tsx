@@ -8,10 +8,132 @@ import Icon from '@/components/ui/Icon'
 import Button from '@/components/ui/Button'
 import { useApp } from '@/contexts/AppContext'
 import { getMemories, updateBaby, createMemory, unlockAchievement } from '@/lib/supabase/queries'
+import { createClient } from '@/lib/supabase/client'
 import { uploadToR2 } from '@/lib/r2/upload'
 import { formatShortDate, calculateCurrentWeek, weeksUntilDue, MEMORY_COLORS, formatLocalDate, getLifeStage } from '@/lib/utils'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import type { Memory } from '@/types'
+
+// ── Partner types ─────────────────────────────────────────────────────────────
+type Banner = { id: string; partner_name: string; image_url: string; link_url: string }
+type Product = { id: string; title: string; price: number; original_price: number | null; image_url: string; affiliate_url: string; category: string; is_featured: boolean }
+
+// ── Banner Carousel ───────────────────────────────────────────────────────────
+function PartnerBanners() {
+  const [banners, setBanners] = useState<Banner[]>([])
+  const [idx, setIdx] = useState(0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    createClient().from('partner_banners').select('id,partner_name,image_url,link_url').eq('is_active', true).order('sort_order').then(({ data }) => {
+      if (data?.length) setBanners(data)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (banners.length < 2) return
+    const t = setInterval(() => setIdx(i => (i + 1) % banners.length), 4000)
+    return () => clearInterval(t)
+  }, [banners.length])
+
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const child = scrollRef.current.children[idx] as HTMLElement | undefined
+    if (child) scrollRef.current.scrollTo({ left: child.offsetLeft, behavior: 'smooth' })
+  }, [idx])
+
+  if (!banners.length) return null
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)' }}>Parceiros em destaque</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>Publicidade</span>
+      </div>
+      <div ref={scrollRef} style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', borderRadius: 18 }}>
+        {banners.map((b, i) => (
+          <a key={b.id} href={b.link_url} target="_blank" rel="noopener noreferrer sponsored"
+            onClick={() => setIdx(i)}
+            style={{ flexShrink: 0, width: '100%', scrollSnapAlign: 'start', display: 'block', borderRadius: 18, overflow: 'hidden', position: 'relative', textDecoration: 'none' }}>
+            <img src={b.image_url} alt={b.partner_name} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block' }}
+              onError={e => { e.currentTarget.style.background = 'var(--gradient-brand)'; e.currentTarget.style.minHeight = '130px' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,.55) 0%, rgba(0,0,0,.1) 60%)', display: 'flex', alignItems: 'flex-end', padding: '12px 16px' }}>
+              <div>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff', margin: 0 }}>{b.partner_name}</p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,.8)', margin: '2px 0 0', fontFamily: 'var(--font-body)' }}>Ver ofertas →</p>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+      {banners.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 8 }}>
+          {banners.map((_, i) => (
+            <button key={i} onClick={() => setIdx(i)}
+              style={{ width: i === idx ? 16 : 6, height: 6, borderRadius: 999, background: i === idx ? 'var(--accent)' : 'var(--border-strong)', border: 'none', cursor: 'pointer', padding: 0, transition: 'width .2s' }} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Products grid ─────────────────────────────────────────────────────────────
+function PartnerProducts() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [show, setShow] = useState(6)
+
+  useEffect(() => {
+    createClient().from('partner_products').select('id,title,price,original_price,image_url,affiliate_url,category,is_featured').eq('is_active', true).order('sort_order').then(({ data }) => {
+      if (data?.length) setProducts(data)
+    })
+  }, [])
+
+  if (!products.length) return null
+
+  const discount = (p: Product) => p.original_price ? Math.round((1 - p.price / p.original_price) * 100) : 0
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)' }}>Para o seu bebê 🛍️</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>Via Amazon</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {products.slice(0, show).map(p => {
+          const pct = discount(p)
+          return (
+            <a key={p.id} href={p.affiliate_url} target="_blank" rel="noopener noreferrer sponsored"
+              style={{ background: '#fff', borderRadius: 16, border: '1px solid var(--border-subtle)', overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ position: 'relative' }}>
+                <img src={p.image_url} alt={p.title} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block' }}
+                  onError={e => { e.currentTarget.style.background = 'var(--violet-50)'; e.currentTarget.style.minHeight = '130px' }} />
+                {pct >= 10 && <span style={{ position: 'absolute', top: 8, left: 8, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 6px' }}>-{pct}%</span>}
+                {p.is_featured && <span style={{ position: 'absolute', top: 8, right: 8, background: '#f59e0b', color: '#fff', fontSize: 9, fontWeight: 700, borderRadius: 6, padding: '2px 6px' }}>⭐ DESTAQUE</span>}
+              </div>
+              <div style={{ padding: '10px 10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12, color: 'var(--text-strong)', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>{p.title}</p>
+                <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-body)' }}>{p.category}</p>
+                <div style={{ marginTop: 'auto', paddingTop: 4 }}>
+                  {p.original_price && <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '0 0 1px', textDecoration: 'line-through', fontFamily: 'var(--font-body)' }}>R$ {p.original_price.toFixed(2).replace('.', ',')}</p>}
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: 'var(--accent)', margin: 0 }}>R$ {p.price.toFixed(2).replace('.', ',')}</p>
+                </div>
+              </div>
+            </a>
+          )
+        })}
+      </div>
+      {show < products.length && (
+        <button onClick={() => setShow(n => n + 6)} style={{ width: '100%', marginTop: 12, padding: '13px', borderRadius: 14, border: '1.5px solid var(--border-subtle)', background: '#fff', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--text-body)', cursor: 'pointer' }}>
+          Ver mais produtos ({products.length - show} restantes)
+        </button>
+      )}
+      <p style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8, fontFamily: 'var(--font-body)' }}>
+        Links de afiliado Amazon · Preços sujeitos a alteração
+      </p>
+    </div>
+  )
+}
 
 export default function DashboardPage() {
   const { user, baby, setBaby, isLoading } = useApp()
@@ -43,7 +165,7 @@ export default function DashboardPage() {
       setBaby({ ...baby, status: 'nascido', birth_date: nasceuDate })
 
       if (nasceuPhoto) {
-        const mediaUrl = await uploadToR2(nasceuPhoto, 'memories')
+        const { url: mediaUrl, sizeBytes } = await uploadToR2(nasceuPhoto, 'memories')
         await createMemory({
           baby_id: baby.id,
           user_id: user.id,
@@ -55,6 +177,7 @@ export default function DashboardPage() {
           bg_color: MEMORY_COLORS[getLifeStage(new Date().toISOString(), baby.birth_date)] ?? MEMORY_COLORS['ano-1'],
           emoji: '🎀',
           week: baby.week,
+          file_size_bytes: sizeBytes,
         })
         const allMems = await getMemories(baby.id)
         if (allMems.length === 1) unlockAchievement(baby.id, user.id, 'primeira-memoria', 50).catch(() => {})
@@ -225,21 +348,18 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Botão "Nasceu" — aparece na última semana ou após a DPP */}
-                {weeksLeft <= 1 && (
-                  <button
-                    onClick={() => setShowNasceu(true)}
-                    style={{
-                      marginTop: 16, padding: '10px 20px', borderRadius: 99,
-                      background: '#fff', border: 'none', cursor: 'pointer',
-                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
-                      color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6,
-                      boxShadow: '0 2px 12px rgba(0,0,0,.15)',
-                    }}
-                  >
-                    🎉 Ele/Ela nasceu!
-                  </button>
-                )}
+                <button
+                  onClick={() => setShowNasceu(true)}
+                  style={{
+                    marginTop: 16, padding: '10px 20px', borderRadius: 99,
+                    background: '#fff', border: 'none', cursor: 'pointer',
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
+                    color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6,
+                    boxShadow: '0 2px 12px rgba(0,0,0,.15)',
+                  }}
+                >
+                  🎉 Ele/Ela nasceu!
+                </button>
               </div>
 
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, flexShrink: 0 }}>
@@ -248,6 +368,12 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Partner banners */}
+        <PartnerBanners />
+
+        {/* Partner products */}
+        <PartnerProducts />
 
         {/* Conquistas section */}
         <div>

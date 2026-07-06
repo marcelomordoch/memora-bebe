@@ -137,7 +137,7 @@ export async function signOut() {
 export async function resetPassword(email: string) {
   const supabase = createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/nova-senha`,
+    redirectTo: `${window.location.origin}/auth/callback?next=/nova-senha`,
   })
   if (error) throw error
 }
@@ -170,9 +170,9 @@ export async function updateBaby(id: string, data: Partial<Baby>): Promise<Baby>
 }
 
 export async function uploadBabyPhoto(babyId: string, file: File): Promise<string> {
-  const publicUrl = await uploadToR2(file, 'babies')
-  await updateBaby(babyId, { photo_url: publicUrl })
-  return publicUrl
+  const { url } = await uploadToR2(file, 'babies')
+  await updateBaby(babyId, { photo_url: url })
+  return url
 }
 
 // ── MEMORIES ──────────────────────────────────────────────────────────────────
@@ -200,10 +200,27 @@ export async function getMemories(babyId: string, lifeStage?: string): Promise<M
 
 export async function createMemory(data: Omit<Memory, 'id' | 'created_at' | 'likes_count'>): Promise<Memory> {
   const supabase = createClient()
+  // file_size_bytes é opcional e só existe após a migration — extrair para não bloquear o insert
+  const { file_size_bytes, ...insertData } = data as typeof data & { file_size_bytes?: number }
   const { data: created, error } = await supabase
-    .from('memories').insert({ ...data, likes_count: 0 }).select().single()
+    .from('memories').insert({ ...insertData, likes_count: 0 }).select().single()
   if (error) throw error
+  // Tenta salvar tamanho separadamente — falha silenciosamente se a coluna ainda não existe
+  if (file_size_bytes && created?.id) {
+    supabase.from('memories').update({ file_size_bytes }).eq('id', created.id).catch(() => {})
+  }
   return created
+}
+
+export async function updateMemory(id: string, data: { title?: string; body?: string; media_url?: string | null; file_size_bytes?: number }): Promise<void> {
+  const supabase = createClient()
+  const { file_size_bytes, ...rest } = data
+  const { error } = await supabase.from('memories').update(rest).eq('id', id)
+  if (error) throw error
+  // Tenta atualizar tamanho separadamente — falha silenciosamente se a coluna ainda não existe
+  if (file_size_bytes) {
+    supabase.from('memories').update({ file_size_bytes }).eq('id', id).catch(() => {})
+  }
 }
 
 export async function deleteMemory(id: string): Promise<void> {
@@ -220,10 +237,22 @@ export async function toggleLike(memoryId: string, userId: string): Promise<void
 
 export async function uploadMemoryMedia(memoryId: string, file: File, type: string): Promise<string> {
   const folder = type === 'video' ? 'videos' : type === 'audio' ? 'audio' : 'memories'
-  const publicUrl = await uploadToR2(file, folder)
+  const { url, sizeBytes } = await uploadToR2(file, folder)
   const supabase = createClient()
-  await supabase.from('memories').update({ media_url: publicUrl }).eq('id', memoryId)
-  return publicUrl
+  await supabase.from('memories').update({ media_url: url }).eq('id', memoryId)
+  // Tamanho salvo separadamente — falha silenciosamente se a coluna ainda não existe
+  supabase.from('memories').update({ file_size_bytes: sizeBytes }).eq('id', memoryId).catch(() => {})
+  return url
+}
+
+export async function getStorageUsedBytes(babyId: string): Promise<number> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('memories')
+    .select('file_size_bytes')
+    .eq('baby_id', babyId)
+  if (!data) return 0
+  return data.reduce((sum, m) => sum + (m.file_size_bytes ?? 0), 0)
 }
 
 // ── FAMILY ────────────────────────────────────────────────────────────────────

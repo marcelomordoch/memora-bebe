@@ -5,10 +5,15 @@ import { compressImage } from './compress'
  * Usa URL pré-assinada para evitar o limite de 4.5MB das funções serverless da Vercel.
  * Imagens são comprimidas no browser antes do upload (2048px, JPEG 85%).
  */
+export interface UploadResult {
+  url: string
+  sizeBytes: number
+}
+
 export async function uploadToR2(
   file: File,
   folder: 'memories' | 'videos' | 'audio' | 'babies'
-): Promise<string> {
+): Promise<UploadResult> {
   // Compress images before upload (videos/audio pass through unchanged)
   const toUpload = await compressImage(file)
 
@@ -41,5 +46,5 @@ export async function uploadToR2(
     throw new Error(`Falha no upload para o R2 (status ${uploadRes.status})`)
   }
 
-  return publicUrl
+  return { url: publicUrl, sizeBytes: toUpload.size }
 }

@@ -1,13 +1,152 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { getMemories, toggleLike, deleteMemory } from '@/lib/supabase/queries'
+import { getMemories, toggleLike, deleteMemory, updateMemory } from '@/lib/supabase/queries'
+import { uploadToR2 } from '@/lib/r2/upload'
+import { compressImage } from '@/lib/r2/compress'
 import { formatDate, formatShortDate, getLifeStage, lifeStageLabel, babyAgeAtMemory } from '@/lib/utils'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import type { Memory } from '@/types'
+
+// ─── Edit sheet ──────────────────────────────────────────────────────────────
+
+function EditMemorySheet({
+  memory,
+  onClose,
+  onSaved,
+}: {
+  memory: Memory
+  onClose: () => void
+  onSaved: (updated: Partial<Memory>) => void
+}) {
+  const [title, setTitle] = useState(memory.title)
+  const [body, setBody] = useState(memory.body || '')
+  const [newPhotoFile, setNewPhotoFile] = useState<File | null>(null)
+  const [newPhotoPreview, setNewPhotoPreview] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+  const currentMediaUrl = memory.media_url
+
+  async function handleSave() {
+    if (!title.trim()) { setError('O título não pode estar vazio.'); return }
+    setSaving(true)
+    setError('')
+    try {
+      let media_url = currentMediaUrl
+      let fileSizeBytes: number | undefined
+      if (newPhotoFile) {
+        const compressed = await compressImage(newPhotoFile)
+        const result = await uploadToR2(compressed, 'memories')
+        media_url = result.url
+        fileSizeBytes = result.sizeBytes
+      }
+      const patch: { title: string; body: string; media_url?: string; file_size_bytes?: number } = { title: title.trim(), body }
+      if (newPhotoFile) { patch.media_url = media_url; patch.file_size_bytes = fileSizeBytes }
+      await updateMemory(memory.id, patch)
+      onSaved(patch)
+      onClose()
+    } catch {
+      setError('Erro ao salvar. Tente novamente.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setNewPhotoFile(file)
+    setNewPhotoPreview(URL.createObjectURL(file))
+  }
+
+  const hasPhoto = memory.type === 'foto' || (memory.type !== 'audio' && memory.type !== 'video' && !!currentMediaUrl)
+  const previewSrc = newPhotoPreview || null
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(18,17,26,.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '24px 24px 0 0', padding: '20px 20px 40px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '90dvh', overflowY: 'auto' }}
+      >
+        {/* Handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--text-strong)', margin: 0 }}>Editar memória</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <Icon name="x" size={22} color="var(--text-muted)" strokeWidth={2} />
+          </button>
+        </div>
+
+        {/* Título */}
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 6 }}>Título</label>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--border-strong)', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-strong)', background: '#fff', boxSizing: 'border-box', outline: 'none' }}
+          />
+        </div>
+
+        {/* Texto */}
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 6 }}>Texto</label>
+          <textarea
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            rows={5}
+            style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--border-strong)', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-strong)', background: '#fff', boxSizing: 'border-box', resize: 'vertical', outline: 'none', lineHeight: 1.6 }}
+          />
+        </div>
+
+        {/* Foto (só se a memória é do tipo foto) */}
+        {(hasPhoto || memory.type === 'foto') && (
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-body)', display: 'block', marginBottom: 6 }}>Foto</label>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+            {previewSrc ? (
+              <div style={{ position: 'relative', width: '100%', height: 180, borderRadius: 14, overflow: 'hidden', background: '#000' }}>
+                <img src={previewSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <button onClick={() => { setNewPhotoFile(null); setNewPhotoPreview(null) }} style={{ position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: '50%', background: 'rgba(0,0,0,.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="x" size={14} color="#fff" strokeWidth={2.5} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileRef.current?.click()}
+                style={{ width: '100%', padding: '14px', borderRadius: 14, border: '2px dashed var(--border-strong)', background: 'var(--violet-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--accent)' }}
+              >
+                <Icon name="camera" size={18} color="var(--accent)" />
+                Trocar foto
+              </button>
+            )}
+          </div>
+        )}
+
+        {error && <p style={{ fontSize: 13, color: 'var(--danger)', fontFamily: 'var(--font-body)', textAlign: 'center', margin: 0 }}>{error}</p>}
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{ width: '100%', padding: '15px', borderRadius: 14, border: 'none', background: 'var(--gradient-brand)', color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: 'var(--shadow-accent)' }}
+        >
+          {saving ? (
+            <><span style={{ width: 18, height: 18, border: '2.5px solid rgba(255,255,255,.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Salvando...</>
+          ) : '✓ Salvar alterações'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 // ─── ImageViewer overlay ─────────────────────────────────────────────────────
 
@@ -17,6 +156,7 @@ function ImageViewer({
   onClose,
   onToggleLike,
   onDelete,
+  onEdit,
   isOwner,
 }: {
   memory: Memory
@@ -24,6 +164,7 @@ function ImageViewer({
   onClose: () => void
   onToggleLike: (id: string) => void
   onDelete: (id: string) => void
+  onEdit: () => void
   isOwner: boolean
 }) {
   const ageLabel = babyAgeAtMemory(memory.created_at, birthDate)
@@ -226,27 +367,30 @@ function ImageViewer({
             Curtir{count > 0 ? ` (${count})` : ''}
           </button>
 
-          <button
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              padding: '13px 0',
-              borderRadius: 14,
-              background: 'var(--surface-sunken)',
-              border: 'none',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-body)',
-              fontWeight: 600,
-              fontSize: 14,
-              color: 'var(--text-body)',
-            }}
-          >
-            <Icon name="share-2" size={18} color="var(--text-body)" strokeWidth={2} />
-            Compartilhar
-          </button>
+          {isOwner && (
+            <button
+              onClick={onEdit}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '13px 0',
+                borderRadius: 14,
+                background: 'var(--surface-sunken)',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+                fontSize: 14,
+                color: 'var(--text-body)',
+              }}
+            >
+              <Icon name="edit" size={18} color="var(--text-body)" strokeWidth={2} />
+              Editar
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -379,6 +523,7 @@ export default function MemoriasPage() {
   const [allMemories, setAllMemories] = useState<Memory[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<Memory | null>(null)
+  const [editing, setEditing] = useState(false)
 
   // Fetch all memories once when baby loads
   const fetchMemories = useCallback(async () => {
@@ -573,12 +718,25 @@ export default function MemoriasPage() {
           birthDate={baby?.birth_date}
           onClose={() => setSelected(null)}
           onToggleLike={handleToggleLike}
+          onEdit={() => setEditing(true)}
           isOwner={selected.user_id === user?.id}
           onDelete={async (id) => {
             try {
               await deleteMemory(id)
               setAllMemories(prev => prev.filter(m => m.id !== id))
             } catch (e) { console.error(e) }
+          }}
+        />
+      )}
+
+      {/* Edit sheet */}
+      {selected && editing && (
+        <EditMemorySheet
+          memory={selected}
+          onClose={() => setEditing(false)}
+          onSaved={(patch) => {
+            setAllMemories(prev => prev.map(m => m.id === selected.id ? { ...m, ...patch } : m))
+            setSelected(prev => prev ? { ...prev, ...patch } : prev)
           }}
         />
       )}

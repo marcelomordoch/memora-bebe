@@ -178,7 +178,7 @@ export default function AudioPage() {
       const lifeStage = getLifeStage(new Date().toISOString(), baby.birth_date)
       const ext = audioBlob.type.includes('webm') ? 'webm' : 'ogg'
       const file = new File([audioBlob], `audio_${Date.now()}.${ext}`, { type: audioBlob.type })
-      const mediaUrl = await uploadToR2(file, 'audio')
+      const { url: mediaUrl, sizeBytes } = await uploadToR2(file, 'audio')
       await createMemory({
         baby_id: baby.id,
         user_id: user.id,
@@ -190,6 +190,7 @@ export default function AudioPage() {
         bg_color: MEMORY_COLORS[lifeStage] ?? MEMORY_COLORS['ano-1'],
         emoji: '🎙️',
         week: baby.week,
+        file_size_bytes: sizeBytes,
       })
       const allMems = await getMemories(baby.id)
       if (allMems.length === 1) unlockAchievement(baby.id, user.id, 'primeira-memoria', 50).catch(() => {})

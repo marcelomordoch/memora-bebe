@@ -17,12 +17,12 @@ interface Feature {
 }
 
 const FREE_FEATURES: Feature[] = [
-  { label: 'Visualizar memórias da família', included: true },
-  { label: 'Curtir e comentar', included: true },
+  { label: 'Upload de fotos e vídeos', included: true },
+  { label: 'Gravação de áudio', included: true },
   { label: 'Criar histórias de texto', included: true },
-  { label: 'Upload de fotos e vídeos', included: false },
-  { label: 'Gravação de áudio', included: false },
-  { label: 'Armazenamento ilimitado', included: false },
+  { label: 'Conquistas e Árvore da Vida', included: true },
+  { label: 'Compartilhamento com família', included: true },
+  { label: '1 GB de armazenamento', included: true },
 ];
 
 const PREMIUM_FEATURES: Feature[] = [

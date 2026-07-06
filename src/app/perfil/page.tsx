@@ -12,6 +12,13 @@ import InstallButton from '@/components/ui/InstallButton'
 
 const links = [
   {
+    label: 'Planos',
+    subtitle: 'Armazenamento e assinatura',
+    href: '/perfil/planos',
+    icon: 'layers',
+    bgColor: '#EDE9FE',
+  },
+  {
     label: 'Árvore da Vida',
     subtitle: 'Veja sua jornada visual',
     href: '/conquistas/arvore',
@@ -38,6 +45,13 @@ const links = [
     href: '/perfil/loja',
     icon: 'gift',
     bgColor: '#FEF3C7',
+  },
+  {
+    label: 'Álbum Impresso',
+    subtitle: 'Fotolivros e revelações — Phooto',
+    href: '/perfil/album-impresso',
+    icon: 'book-open',
+    bgColor: '#FDECEA',
   },
 ]
 

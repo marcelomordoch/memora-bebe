@@ -65,6 +65,8 @@ export default function LoginPage() {
           email: authUser.email ?? '',
           name: authUser.user_metadata?.name ?? '',
           plan: 'free',
+          storage_plan: 'free',
+          storage_limit_gb: 1,
           created_at: authUser.created_at,
         })
       }
