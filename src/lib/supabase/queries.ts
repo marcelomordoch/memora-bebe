@@ -207,7 +207,7 @@ export async function createMemory(data: Omit<Memory, 'id' | 'created_at' | 'lik
   if (error) throw error
   // Tenta salvar tamanho separadamente — falha silenciosamente se a coluna ainda não existe
   if (file_size_bytes && created?.id) {
-    supabase.from('memories').update({ file_size_bytes }).eq('id', created.id).catch(() => {})
+    void supabase.from('memories').update({ file_size_bytes }).eq('id', created.id)
   }
   return created
 }
@@ -219,7 +219,7 @@ export async function updateMemory(id: string, data: { title?: string; body?: st
   if (error) throw error
   // Tenta atualizar tamanho separadamente — falha silenciosamente se a coluna ainda não existe
   if (file_size_bytes) {
-    supabase.from('memories').update({ file_size_bytes }).eq('id', id).catch(() => {})
+    void supabase.from('memories').update({ file_size_bytes }).eq('id', id)
   }
 }
 
@@ -241,7 +241,7 @@ export async function uploadMemoryMedia(memoryId: string, file: File, type: stri
   const supabase = createClient()
   await supabase.from('memories').update({ media_url: url }).eq('id', memoryId)
   // Tamanho salvo separadamente — falha silenciosamente se a coluna ainda não existe
-  supabase.from('memories').update({ file_size_bytes: sizeBytes }).eq('id', memoryId).catch(() => {})
+  void supabase.from('memories').update({ file_size_bytes: sizeBytes }).eq('id', memoryId)
   return url
 }
 
