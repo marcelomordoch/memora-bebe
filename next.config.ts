@@ -1,18 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async headers() {
-    return [
-      {
-        // Apply COOP/COEP only on the compor page (FFmpeg.wasm needs SharedArrayBuffer)
-        source: '/compor/:path*',
-        headers: [
-          { key: 'Cross-Origin-Opener-Policy',   value: 'same-origin' },
-          { key: 'Cross-Origin-Embedder-Policy',  value: 'require-corp' },
-        ],
-      },
-    ]
-  },
+  // COOP/COEP removed: FFmpeg uses @ffmpeg/core UMD (non-threaded) which does NOT
+  // need SharedArrayBuffer, so these headers are unnecessary and were blocking
+  // the cross-origin PUT to Cloudflare R2.
 };
 
 export default nextConfig;

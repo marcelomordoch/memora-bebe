@@ -204,7 +204,7 @@ export async function createMemory(data: Omit<Memory, 'id' | 'created_at' | 'lik
   const { file_size_bytes, ...insertData } = data as typeof data & { file_size_bytes?: number }
   const { data: created, error } = await supabase
     .from('memories').insert({ ...insertData, likes_count: 0 }).select().single()
-  if (error) throw error
+  if (error) throw new Error(`[DB] ${error.message} (code: ${error.code})`)
   // Tenta salvar tamanho separadamente — falha silenciosamente se a coluna ainda não existe
   if (file_size_bytes && created?.id) {
     void supabase.from('memories').update({ file_size_bytes }).eq('id', created.id)
