@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { getStorageUsedBytes } from '@/lib/supabase/queries'
+import { getStorageUsedBytes, redeemGiftCard } from '@/lib/supabase/queries'
 
 // ── Preços ────────────────────────────────────────────────────────────────────
 // R2: R$0,086/GB/mês · Stripe: 3,99% + R$0,39 · Margem: 15%
@@ -51,6 +51,152 @@ function StorageBar({ usedBytes, limitGB }: { usedBytes: number; limitGB: number
         <p style={{ fontSize: 11, color: barColor, margin: '4px 0 0', textAlign: 'right', fontWeight: 500 }}>
           {pct.toFixed(1)}% usado
         </p>
+      )}
+    </div>
+  )
+}
+
+function CreditSection({
+  credit,
+  userId,
+  onCreditAdded,
+  router,
+}: {
+  credit: number
+  userId: string
+  onCreditAdded: (newTotal: number) => void
+  router: ReturnType<typeof useRouter>
+}) {
+  const [giftCode, setGiftCode] = useState('')
+  const [redeemLoading, setRedeemLoading] = useState(false)
+  const [redeemMsg, setRedeemMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [showTopup, setShowTopup] = useState(false)
+
+  async function handleRedeem() {
+    const code = giftCode.trim()
+    if (!code) return
+    setRedeemLoading(true)
+    setRedeemMsg(null)
+    try {
+      const { amount } = await redeemGiftCard(code, userId)
+      setRedeemMsg({ type: 'ok', text: `R$ ${amount.toFixed(2).replace('.', ',')} adicionados ao seu saldo!` })
+      onCreditAdded(credit + amount)
+      setGiftCode('')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Código inválido ou já utilizado.'
+      setRedeemMsg({ type: 'err', text: msg })
+    } finally {
+      setRedeemLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ margin: '20px 20px 0' }}>
+      <h3 style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: 14, color: '#2E2C4A', margin: '0 0 10px' }}>
+        Créditos
+      </h3>
+
+      {/* Saldo */}
+      <div style={{
+        background: credit > 0 ? 'linear-gradient(135deg,#166534,#15803D)' : 'linear-gradient(135deg,#4C1D95,#6B53AE)',
+        borderRadius: 18, padding: '18px 20px', marginBottom: 12,
+      }}>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', margin: '0 0 2px', fontWeight: 500 }}>Saldo disponível</p>
+        <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: 28, color: '#fff', margin: '0 0 4px', letterSpacing: -0.5 }}>
+          {credit > 0 ? `R$ ${credit.toFixed(2).replace('.', ',')}` : 'R$ 0,00'}
+        </p>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', margin: 0, lineHeight: 1.5 }}>
+          {credit > 0
+            ? 'Descontado automaticamente na próxima assinatura.'
+            : 'Adicione créditos ou resgate um gift card.'}
+        </p>
+      </div>
+
+      {/* Gift card */}
+      <div style={{ background: '#fff', borderRadius: 14, padding: '14px 16px', border: '1.5px solid #E7E5F0', marginBottom: 10 }}>
+        <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: 13, color: '#2E2C4A', margin: '0 0 10px' }}>
+          🎁 Resgatar gift card
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={giftCode}
+            onChange={e => { setGiftCode(e.target.value.toUpperCase()); setRedeemMsg(null) }}
+            placeholder="Código do gift card"
+            style={{
+              flex: 1, padding: '10px 12px', borderRadius: 10,
+              border: '1.5px solid #E7E5F0', fontSize: 13,
+              fontFamily: 'monospace', letterSpacing: 1.5,
+              color: '#2E2C4A', outline: 'none', background: '#FAFAFA',
+            }}
+            onKeyDown={e => e.key === 'Enter' && handleRedeem()}
+          />
+          <button
+            onClick={handleRedeem}
+            disabled={redeemLoading || !giftCode.trim()}
+            style={{
+              padding: '10px 16px', borderRadius: 10, border: 'none',
+              background: redeemLoading || !giftCode.trim() ? '#E7E5F0' : '#6B53AE',
+              color: redeemLoading || !giftCode.trim() ? '#8B89B0' : '#fff',
+              fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 13,
+              cursor: redeemLoading || !giftCode.trim() ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {redeemLoading ? '...' : 'Resgatar'}
+          </button>
+        </div>
+        {redeemMsg && (
+          <p style={{ fontSize: 12, color: redeemMsg.type === 'ok' ? '#166534' : '#DC2626', margin: '8px 0 0', fontWeight: 600 }}>
+            {redeemMsg.type === 'ok' ? '✓ ' : '✕ '}{redeemMsg.text}
+          </p>
+        )}
+      </div>
+
+      {/* Comprar créditos */}
+      {showTopup ? (
+        <div style={{ background: '#fff', borderRadius: 14, padding: '14px 16px', border: '1.5px solid #E7E5F0' }}>
+          <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: 13, color: '#2E2C4A', margin: '0 0 10px' }}>
+            Escolha o valor a adicionar
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+            {[10, 30, 50, 100].map(amt => (
+              <button
+                key={amt}
+                onClick={() => router.push(`/pagamento?type=credit&amount=${amt}&uid=${userId}`)}
+                style={{
+                  padding: '14px', borderRadius: 12, border: '1.5px solid #DDD6FE',
+                  background: '#F5F3FF', cursor: 'pointer',
+                  fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 16, color: '#6B53AE',
+                }}
+              >
+                R$ {amt},00
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowTopup(false)}
+            style={{
+              width: '100%', padding: '10px', borderRadius: 10,
+              border: 'none', background: 'transparent',
+              color: '#8B89B0', fontSize: 13, cursor: 'pointer',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowTopup(true)}
+          style={{
+            width: '100%', padding: '13px', borderRadius: 14,
+            border: '1.5px solid #6B53AE', background: 'transparent', cursor: 'pointer',
+            fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 14, color: '#6B53AE',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          + Comprar créditos
+        </button>
       )}
     </div>
   )
@@ -212,6 +358,16 @@ export default function PlanosPage() {
         </div>
       </div>
 
+      {/* ── Seção de Créditos ──────────────────────────────────────── */}
+      <CreditSection
+        credit={user?.account_credit_brl ?? 0}
+        userId={user?.id ?? ''}
+        onCreditAdded={(newTotal) => {
+          if (user) setUser({ ...user, account_credit_brl: newTotal })
+        }}
+        router={router}
+      />
+
       {/* Cards de plano */}
       <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h3 style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: 14, color: '#2E2C4A', margin: 0 }}>Escolha seu armazenamento</h3>
@@ -317,19 +473,6 @@ export default function PlanosPage() {
           )
         })}
       </div>
-
-      {/* Crédito disponível */}
-      {(user?.account_credit_brl ?? 0) > 0 && (
-        <div style={{ margin: '16px 20px 0', background: '#F0FDF4', borderRadius: 14, padding: '12px 16px', border: '1px solid #86EFAC', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 20 }}>💰</span>
-          <div>
-            <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 13, color: '#166534', margin: 0 }}>
-              Crédito disponível: R$ {(user?.account_credit_brl ?? 0).toFixed(2).replace('.', ',')}
-            </p>
-            <p style={{ fontSize: 11, color: '#15803D', margin: 0 }}>Será descontado automaticamente na próxima assinatura.</p>
-          </div>
-        </div>
-      )}
 
       {/* Modal de confirmação de downgrade */}
       {downgradeModal && (

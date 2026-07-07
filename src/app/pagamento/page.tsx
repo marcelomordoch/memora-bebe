@@ -43,6 +43,14 @@ function getProductInfo(params: URLSearchParams) {
       icon: info.emoji,
     }
   }
+  if (type === 'credit') {
+    return {
+      type, plan, billing, amount, uid, senderName, message,
+      name: `Adicionar créditos — R$ ${parseFloat(amount).toFixed(2).replace('.', ',')}`,
+      price: `R$ ${parseFloat(amount).toFixed(2).replace('.', ',')}`,
+      icon: '💰',
+    }
+  }
   return {
     type, plan, billing, amount, uid, senderName, message,
     name: `Gift Card Memora Bebê`,
@@ -114,17 +122,24 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
   const { setPlan } = useApp()
 
   useEffect(() => {
-    if (product.type !== 'upgrade') return
-    // Atualiza estado local imediatamente
-    setPlan('premium')
-    // Persiste no banco via API route (usa sessão do servidor, não depende de uid na URL)
-    fetch('/api/upgrade', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ billing: product.billing, plan: product.plan }),
-    }).then(r => r.json()).then(d => {
-      if (!d.success) console.error('[upgrade]', d.error)
-    }).catch(console.error)
+    if (product.type === 'upgrade') {
+      setPlan('premium')
+      fetch('/api/upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billing: product.billing, plan: product.plan }),
+      }).then(r => r.json()).then(d => {
+        if (!d.success) console.error('[upgrade]', d.error)
+      }).catch(console.error)
+    } else if (product.type === 'credit') {
+      fetch('/api/credit-topup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: parseFloat(product.amount) }),
+      }).then(r => r.json()).then(d => {
+        if (!d.success) console.error('[credit-topup]', d.error)
+      }).catch(console.error)
+    }
   }, []) // eslint-disable-line
 
   return (
@@ -140,6 +155,8 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
         <p style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>
           {product.type === 'upgrade'
             ? 'Seu plano Premium foi ativado. Aproveite todos os recursos!'
+            : product.type === 'credit'
+            ? `R$ ${parseFloat(product.amount).toFixed(2).replace('.', ',')} adicionados ao seu saldo de créditos!`
             : `Gift Card de ${product.price} adicionado à sua conta.`}
         </p>
       </div>
@@ -255,12 +272,12 @@ function PagamentoContent() {
   const [error, setError] = useState('')
   const [couponFree, setCouponFree] = useState(false)
 
-  // Crédito disponível da conta
-  const credit = user?.account_credit_brl ?? 0
+  // Crédito disponível da conta (não aplica crédito para comprar crédito)
+  const credit = product.type === 'credit' ? 0 : (user?.account_credit_brl ?? 0)
   const originalAmount = parseFloat(product.amount)
   const creditUsed = Math.min(credit, originalAmount)
   const finalAmount = Math.max(0.50, originalAmount - creditUsed).toFixed(2)
-  const isFreeWithCredit = credit >= originalAmount
+  const isFreeWithCredit = product.type !== 'credit' && credit >= originalAmount
 
   useEffect(() => {
     if (isFreeWithCredit) { setLoading(false); return }

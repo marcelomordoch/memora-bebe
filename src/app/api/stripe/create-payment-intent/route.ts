@@ -18,29 +18,38 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { type, plan, billing, amount, userId, recipientEmail, senderName, message } = body
 
-    let productKey = ''
+    let intentAmount = 0
+    let intentName = ''
+
     if (type === 'upgrade') {
-      productKey = billing === 'yearly' ? 'premium_yearly' : 'premium_monthly'
+      const productKey = billing === 'yearly' ? 'premium_yearly' : 'premium_monthly'
+      const product = PRODUCTS[productKey as keyof typeof PRODUCTS]
+      if (!product) return NextResponse.json({ error: 'Produto inválido' }, { status: 400 })
+      intentAmount = product.amount
+      intentName = product.name
     } else if (type === 'giftcard') {
       const cents = Math.round(parseFloat(amount) * 100)
-      productKey = `giftcard_${cents}`
+      const productKey = `giftcard_${cents}` as keyof typeof PRODUCTS
+      const product = PRODUCTS[productKey]
+      if (!product) return NextResponse.json({ error: 'Produto inválido' }, { status: 400 })
+      intentAmount = product.amount
+      intentName = product.name
+    } else if (type === 'credit') {
+      const cents = Math.round(parseFloat(amount) * 100)
+      if (cents < 100) return NextResponse.json({ error: 'Valor mínimo R$ 1,00' }, { status: 400 })
+      intentAmount = cents
+      intentName = `Créditos Memora Bebê — R$ ${parseFloat(amount).toFixed(2).replace('.', ',')}`
+    } else {
+      return NextResponse.json({ error: 'Tipo inválido' }, { status: 400 })
     }
 
-    const product = PRODUCTS[productKey as keyof typeof PRODUCTS]
-    if (!product) {
-      return NextResponse.json({ error: 'Produto inválido' }, { status: 400 })
-    }
-
-    // Build metadata — all values must be strings (Stripe requirement)
     const metadata: Record<string, string> = {
       type,
       plan: plan || '',
       billing: billing || '',
-      productKey,
       userId: userId || '',
     }
 
-    // Gift card extra fields
     if (type === 'giftcard') {
       if (recipientEmail) metadata.recipientEmail = recipientEmail
       if (senderName) metadata.senderName = senderName
@@ -48,17 +57,17 @@ export async function POST(req: NextRequest) {
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: product.amount,
-      currency: product.currency,
-      description: product.name,
+      amount: intentAmount,
+      currency: 'brl',
+      description: intentName,
       automatic_payment_methods: { enabled: true },
       metadata,
     })
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
-      amount: product.amount,
-      name: product.name,
+      amount: intentAmount,
+      name: intentName,
     })
   } catch (err: any) {
     console.error('Stripe error:', err)
