@@ -120,6 +120,10 @@ function CheckoutForm({ productName, returnUrl, onSuccess }: { productName: stri
 function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo> }) {
   const router = useRouter()
   const { setPlan, user, setUser } = useApp()
+  const [giftCode, setGiftCode] = useState<string | null>(null)
+  const [codeLoading, setCodeLoading] = useState(product.type === 'giftcard')
+  const [codeError, setCodeError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (product.type === 'upgrade') {
@@ -143,8 +147,46 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
           console.error('[credit-topup]', d.error)
         }
       }).catch(console.error)
+    } else if (product.type === 'giftcard') {
+      fetch('/api/gift-card/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(product.amount),
+          senderName: product.senderName || user?.name,
+          message: product.message,
+        }),
+      }).then(r => r.json()).then(d => {
+        if (d.success) {
+          setGiftCode(d.code)
+        } else {
+          setCodeError(d.error || 'Erro ao gerar código.')
+        }
+      }).catch(() => setCodeError('Erro ao gerar código. Tente novamente.'))
+        .finally(() => setCodeLoading(false))
     }
   }, []) // eslint-disable-line
+
+  function buildWhatsAppUrl(code: string) {
+    const amount = parseFloat(product.amount).toFixed(2).replace('.', ',')
+    const text = [
+      'Oi! Tenho um presente especial para você 💜',
+      '',
+      `Um Gift Card do Memora Bebê no valor de *R$ ${amount}*.`,
+      'Use o código abaixo no app para resgatar:',
+      '',
+      `*${code}*`,
+      '',
+      '📱 Acesse: https://memora-bebe.vercel.app',
+    ].join('\n')
+    return `https://wa.me/?text=${encodeURIComponent(text)}`
+  }
+
+  function handleCopy(code: string) {
+    navigator.clipboard.writeText(code).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: '0 24px', textAlign: 'center' }} className="animate-scale-in">
@@ -161,17 +203,75 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
             ? 'Seu plano Premium foi ativado. Aproveite todos os recursos!'
             : product.type === 'credit'
             ? `R$ ${parseFloat(product.amount).toFixed(2).replace('.', ',')} adicionados ao seu saldo de créditos!`
-            : `Gift Card de ${product.price} adicionado à sua conta.`}
+            : 'Gift Card gerado com sucesso!'}
         </p>
       </div>
 
-      <div style={{ background: 'var(--violet-50)', borderRadius: 18, padding: '16px 20px', width: '100%', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <span style={{ fontSize: 32 }}>{product.icon}</span>
-        <div style={{ textAlign: 'left' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)', margin: 0 }}>{product.name}</p>
-          <p style={{ fontSize: 13, color: 'var(--accent)', fontFamily: 'var(--font-body)', margin: 0 }}>{product.price}</p>
+      {/* ── Gift card: código + WhatsApp ── */}
+      {product.type === 'giftcard' && (
+        <div style={{ width: '100%' }}>
+          {codeLoading ? (
+            <div style={{ background: 'linear-gradient(135deg,#B79BD8,#6B53AE)', borderRadius: 18, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'spin 0.7s linear infinite' }} />
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, margin: 0 }}>Gerando seu código...</p>
+            </div>
+          ) : codeError ? (
+            <div style={{ background: '#FEF2F2', borderRadius: 14, padding: '16px', border: '1px solid #FECACA' }}>
+              <p style={{ color: '#DC2626', fontSize: 14, margin: 0 }}>{codeError}</p>
+            </div>
+          ) : giftCode ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Card visual */}
+              <div style={{ background: 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)', borderRadius: 20, padding: '24px 20px', textAlign: 'left' }}>
+                <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '0 0 4px' }}>💜 Memora Bebê — Gift Card</p>
+                <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: 28, color: '#fff', margin: '0 0 16px' }}>
+                  R$ {parseFloat(product.amount).toFixed(2).replace('.', ',')}
+                </p>
+                <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 18, color: '#fff', letterSpacing: 2 }}>
+                    {giftCode}
+                  </span>
+                  <button
+                    onClick={() => handleCopy(giftCode)}
+                    style={{ background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: 8, padding: '6px 12px', color: '#fff', fontSize: 12, fontFamily: 'Poppins, sans-serif', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    {copied ? '✓ Copiado' : 'Copiar'}
+                  </button>
+                </div>
+              </div>
+
+              {/* WhatsApp */}
+              <a
+                href={buildWhatsAppUrl(giftCode)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  padding: '14px', borderRadius: 14, textDecoration: 'none',
+                  background: '#25D366', color: '#fff',
+                  fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 15,
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                Compartilhar no WhatsApp
+              </a>
+            </div>
+          ) : null}
         </div>
-      </div>
+      )}
+
+      {/* Resumo para outros tipos */}
+      {product.type !== 'giftcard' && (
+        <div style={{ background: 'var(--violet-50)', borderRadius: 18, padding: '16px 20px', width: '100%', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ fontSize: 32 }}>{product.icon}</span>
+          <div style={{ textAlign: 'left' }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)', margin: 0 }}>{product.name}</p>
+            <p style={{ fontSize: 13, color: 'var(--accent)', fontFamily: 'var(--font-body)', margin: 0 }}>{product.price}</p>
+          </div>
+        </div>
+      )}
 
       <Button fullWidth size="lg" onClick={() => router.push('/inicio')}>
         Ir para o início

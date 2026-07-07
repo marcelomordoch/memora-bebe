@@ -40,9 +40,9 @@ const links = [
     bgColor: '#E2F1EA',
   },
   {
-    label: 'Gift Cards & Loja',
-    subtitle: 'Presentes e benefícios',
-    href: '/perfil/loja',
+    label: 'Gift Card',
+    subtitle: 'Presentear com créditos',
+    href: '/perfil/loja/gift-cards',
     icon: 'gift',
     bgColor: '#FEF3C7',
   },
