@@ -31,7 +31,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Buscar perfil — email vem do auth, não do profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, name, plan, storage_plan, storage_limit_gb, credits, created_at')
+        .select('id, name, plan, storage_plan, storage_limit_gb, account_credit_brl, plan_expires_at, created_at')
         .eq('id', authUser.id)
         .single()
 
@@ -42,6 +42,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         plan: (profile?.plan as Plan) ?? 'free',
         storage_plan: profile?.storage_plan ?? 'free',
         storage_limit_gb: profile?.storage_limit_gb ?? 1,
+        account_credit_brl: profile?.account_credit_brl ?? 0,
+        plan_expires_at: profile?.plan_expires_at ?? undefined,
         created_at: profile?.created_at ?? new Date().toISOString(),
       }
       setUser(appUser)

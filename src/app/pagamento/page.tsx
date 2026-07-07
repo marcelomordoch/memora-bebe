@@ -248,13 +248,22 @@ function PagamentoContent() {
   const router = useRouter()
   const params = useSearchParams()
   const product = getProductInfo(params)
+  const { user } = useApp()
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [couponFree, setCouponFree] = useState(false)
 
+  // Crédito disponível da conta
+  const credit = user?.account_credit_brl ?? 0
+  const originalAmount = parseFloat(product.amount)
+  const creditUsed = Math.min(credit, originalAmount)
+  const finalAmount = Math.max(0.50, originalAmount - creditUsed).toFixed(2)
+  const isFreeWithCredit = credit >= originalAmount
+
   useEffect(() => {
+    if (isFreeWithCredit) { setLoading(false); return }
     fetch('/api/stripe/create-payment-intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -262,7 +271,7 @@ function PagamentoContent() {
         type: product.type,
         plan: product.plan,
         billing: product.billing,
-        amount: product.amount,
+        amount: finalAmount,
         userId: product.uid,
         senderName: product.senderName,
         message: product.message,
@@ -294,23 +303,35 @@ function PagamentoContent() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
 
           {/* Resumo do pedido */}
-          <div style={{ background: '#fff', borderRadius: 18, padding: '16px 18px', marginBottom: 20, border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ background: '#fff', borderRadius: 18, padding: '16px 18px', marginBottom: creditUsed > 0 ? 0 : 20, border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: 14 }}>
             <span style={{ fontSize: 36 }}>{product.icon}</span>
             <div style={{ flex: 1 }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)', margin: 0 }}>{product.name}</p>
-              <p style={{ fontSize: 13, color: couponFree ? 'var(--success)' : 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0, fontWeight: couponFree ? 700 : 400 }}>
-                {couponFree ? 'Grátis 🎉' : product.price}
+              <p style={{ fontSize: 13, color: (couponFree || isFreeWithCredit) ? 'var(--success)' : 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0, fontWeight: (couponFree || isFreeWithCredit) ? 700 : 400 }}>
+                {(couponFree || isFreeWithCredit) ? 'Grátis 🎉' : product.price}
               </p>
             </div>
           </div>
 
+          {/* Linha de crédito aplicado */}
+          {creditUsed > 0 && !couponFree && (
+            <div style={{ background: '#F0FDF4', borderRadius: '0 0 14px 14px', padding: '10px 18px', marginBottom: 20, border: '1px solid #86EFAC', borderTop: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: '#166534', fontFamily: 'var(--font-body)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                💰 Crédito em conta
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#166534', fontFamily: 'var(--font-body)' }}>
+                - R$ {creditUsed.toFixed(2).replace('.', ',')}
+              </span>
+            </div>
+          )}
+
           {/* Campo de cupom — apenas para upgrade premium */}
-          {product.type === 'upgrade' && (
+          {product.type === 'upgrade' && !isFreeWithCredit && (
             <CouponBox onFullDiscount={() => setCouponFree(true)} />
           )}
 
-          {/* CTA cupom 100% */}
-          {couponFree ? (
+          {/* CTA: crédito cobre tudo ou cupom 100% */}
+          {(couponFree || isFreeWithCredit) ? (
             <button
               onClick={handleCouponActivate}
               style={{
@@ -327,10 +348,10 @@ function PagamentoContent() {
                 boxShadow: 'var(--shadow-accent)',
               }}
             >
-              ✨ Ativar Premium gratuitamente
+              ✨ Ativar plano gratuitamente
             </button>
           ) : (
-            <>
+<>
               {/* Stripe Elements */}
               {loading && (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>

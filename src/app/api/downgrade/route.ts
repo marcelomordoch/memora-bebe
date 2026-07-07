@@ -11,12 +11,7 @@ function adminClient() {
 }
 
 const PLAN_STORAGE: Record<string, number> = {
-  free:      1,
-  basico:    5,
-  familia:   15,
-  memorias:  30,
-  premium:   60,
-  pro:       100,
+  free: 1, basico: 5, familia: 15, memorias: 30, premium: 60, pro: 100,
 }
 
 export async function POST(req: NextRequest) {
@@ -25,41 +20,36 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    const { billing = 'monthly', plan = 'premium' } = await req.json().catch(() => ({}))
+    const { newPlan, creditBrl } = await req.json() as { newPlan: string; creditBrl: number }
 
-    const days = billing === 'yearly' ? 365 : 30
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + days)
-
-    const storageLimitGb = PLAN_STORAGE[plan] ?? PLAN_STORAGE['premium']
-
+    const storageLimitGb = PLAN_STORAGE[newPlan] ?? 1
     const admin = adminClient()
-    // Busca crédito atual para descontar
+
+    // Busca crédito atual para somar
     const { data: profile } = await admin
       .from('profiles')
       .select('account_credit_brl')
       .eq('id', user.id)
       .single()
+
     const existingCredit = profile?.account_credit_brl ?? 0
+    const totalCredit = Math.round((existingCredit + creditBrl) * 100) / 100
 
     const { error } = await admin
       .from('profiles')
       .update({
-        plan: plan === 'free' ? 'free' : 'premium',
-        storage_plan: plan,
+        plan: newPlan === 'free' ? 'free' : 'premium',
+        storage_plan: newPlan,
         storage_limit_gb: storageLimitGb,
-        plan_expires_at: expiresAt.toISOString(),
-        account_credit_brl: 0,  // crédito zerado após pagamento
+        plan_expires_at: null,         // plano downgraded não tem expiração por enquanto
+        account_credit_brl: totalCredit,
       })
       .eq('id', user.id)
 
-    if (error) {
-      console.error('[upgrade]', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    console.log(`✅ Upgrade: ${user.id} → ${plan} (${storageLimitGb}GB) até ${expiresAt.toISOString()}`)
-    return NextResponse.json({ success: true, plan, storageLimitGb, expiresAt: expiresAt.toISOString() })
+    console.log(`⬇️ Downgrade: ${user.id} → ${newPlan}, crédito gerado: R$ ${creditBrl.toFixed(2)}, total: R$ ${totalCredit.toFixed(2)}`)
+    return NextResponse.json({ success: true, newPlan, storageLimitGb, totalCredit })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Erro interno'
     return NextResponse.json({ error: msg }, { status: 500 })

@@ -54,6 +54,7 @@ export default function RegisterPage() {
         plan: 'free',
         storage_plan: 'free',
         storage_limit_gb: 1,
+        account_credit_brl: 0,
         created_at: authUser.created_at,
       })
 

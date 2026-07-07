@@ -58,14 +58,16 @@ function StorageBar({ usedBytes, limitGB }: { usedBytes: number; limitGB: number
 
 export default function PlanosPage() {
   const router = useRouter()
-  const { user, baby } = useApp()
+  const { user, baby, setUser } = useApp()
   const [usedBytes, setUsedBytes] = useState(0)
   const [loadingStorage, setLoadingStorage] = useState(true)
+  const [downgradeModal, setDowngradeModal] = useState<{ plan: typeof PLANS[0]; credit: number } | null>(null)
+  const [processingDowngrade, setProcessingDowngrade] = useState(false)
 
-  // Plano e limite vindos do perfil do usuário
   const storagePlan = user?.storage_plan ?? 'free'
   const limitGB = user?.storage_limit_gb ?? 1
   const activePlan = PLANS.find(p => p.id === storagePlan) ?? PLANS[0]
+  const activeIdx = PLANS.findIndex(p => p.id === storagePlan)
 
   const usedMB = usedBytes / (1024 * 1024)
   const limitMB = limitGB * 1024
@@ -79,11 +81,55 @@ export default function PlanosPage() {
       .finally(() => setLoadingStorage(false))
   }, [baby?.id])
 
-  function handleUpgrade(planId: string, price: number) {
-    if (planId === 'free') return
-    router.push(
-      `/pagamento?type=upgrade&plan=${planId}&uid=${user?.id ?? ''}&price=${price.toFixed(2)}`
-    )
+  function calcCredit(targetPlan: typeof PLANS[0]): number {
+    if (!user?.plan_expires_at || activePlan.price === 0) return 0
+    const now = new Date()
+    const expires = new Date(user.plan_expires_at)
+    const daysRemaining = Math.max(0, (expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    const credit = (daysRemaining / 30) * activePlan.price
+    return Math.round(credit * 100) / 100
+  }
+
+  function handlePlanClick(targetPlan: typeof PLANS[0]) {
+    if (targetPlan.id === storagePlan) return
+    const targetIdx = PLANS.findIndex(p => p.id === targetPlan.id)
+    const isDowngrade = targetIdx < activeIdx && activePlan.price > 0
+
+    if (isDowngrade) {
+      const credit = calcCredit(targetPlan)
+      setDowngradeModal({ plan: targetPlan, credit })
+    } else {
+      if (targetPlan.id === 'free') return
+      router.push(`/pagamento?type=upgrade&plan=${targetPlan.id}&uid=${user?.id ?? ''}&price=${targetPlan.price.toFixed(2)}`)
+    }
+  }
+
+  async function confirmDowngrade() {
+    if (!downgradeModal) return
+    setProcessingDowngrade(true)
+    try {
+      const res = await fetch('/api/downgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPlan: downgradeModal.plan.id, creditBrl: downgradeModal.credit }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+
+      // Atualiza contexto local
+      if (user) setUser({
+        ...user,
+        storage_plan: downgradeModal.plan.id,
+        storage_limit_gb: downgradeModal.plan.storage,
+        plan_expires_at: undefined,
+        account_credit_brl: json.totalCredit,
+      })
+      setDowngradeModal(null)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setProcessingDowngrade(false)
+    }
   }
 
   return (
@@ -236,7 +282,7 @@ export default function PlanosPage() {
                   </p>
                   {!isFree && (
                     <button
-                      onClick={() => !isActive && handleUpgrade(p.id, p.price)}
+                      onClick={() => !isActive && handlePlanClick(p)}
                       disabled={isActive}
                       style={{
                         padding: '6px 14px',
@@ -255,7 +301,7 @@ export default function PlanosPage() {
                           : isHighlight ? '#6B53AE' : '#fff',
                       }}
                     >
-                      {isActive ? 'Ativo' : 'Assinar'}
+                      {isActive ? 'Ativo' : PLANS.findIndex(x => x.id === p.id) < activeIdx ? 'Fazer downgrade' : 'Assinar'}
                     </button>
                   )}
                 </div>
@@ -271,6 +317,66 @@ export default function PlanosPage() {
           )
         })}
       </div>
+
+      {/* Crédito disponível */}
+      {(user?.account_credit_brl ?? 0) > 0 && (
+        <div style={{ margin: '16px 20px 0', background: '#F0FDF4', borderRadius: 14, padding: '12px 16px', border: '1px solid #86EFAC', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 20 }}>💰</span>
+          <div>
+            <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 13, color: '#166534', margin: 0 }}>
+              Crédito disponível: R$ {(user?.account_credit_brl ?? 0).toFixed(2).replace('.', ',')}
+            </p>
+            <p style={{ fontSize: 11, color: '#15803D', margin: 0 }}>Será descontado automaticamente na próxima assinatura.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de downgrade */}
+      {downgradeModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: '24px 20px', width: '100%', maxWidth: 360 }}>
+            <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 17, color: '#2E2C4A', margin: '0 0 8px' }}>
+              Confirmar downgrade
+            </p>
+            <p style={{ fontSize: 13, color: '#6B6A8A', lineHeight: 1.6, margin: '0 0 16px' }}>
+              Você irá mudar do plano <strong>{activePlan.name}</strong> para <strong>{downgradeModal.plan.name}</strong>.
+            </p>
+
+            {downgradeModal.credit > 0 ? (
+              <div style={{ background: '#F0FDF4', borderRadius: 12, padding: '12px 14px', marginBottom: 16, border: '1px solid #86EFAC' }}>
+                <p style={{ fontSize: 13, color: '#166534', margin: 0, fontWeight: 600 }}>
+                  💰 Crédito gerado: R$ {downgradeModal.credit.toFixed(2).replace('.', ',')}
+                </p>
+                <p style={{ fontSize: 11, color: '#15803D', margin: '4px 0 0' }}>
+                  Dias restantes do plano atual convertidos em crédito para a próxima assinatura.
+                </p>
+              </div>
+            ) : (
+              <div style={{ background: '#FFF7ED', borderRadius: 12, padding: '12px 14px', marginBottom: 16, border: '1px solid #FCD34D' }}>
+                <p style={{ fontSize: 12, color: '#92400E', margin: 0 }}>
+                  Nenhum crédito disponível — o plano atual não tem dias restantes para calcular.
+                </p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setDowngradeModal(null)}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid #E7E5F0', background: '#fff', fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: 14, color: '#6B6A8A', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDowngrade}
+                disabled={processingDowngrade}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#6B53AE', fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 14, color: '#fff', cursor: processingDowngrade ? 'not-allowed' : 'pointer', opacity: processingDowngrade ? 0.7 : 1 }}
+              >
+                {processingDowngrade ? 'Processando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }

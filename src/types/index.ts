@@ -7,6 +7,8 @@ export interface User {
   plan: Plan
   storage_plan: string
   storage_limit_gb: number
+  account_credit_brl: number
+  plan_expires_at?: string
   created_at: string
 }
 
