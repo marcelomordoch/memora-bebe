@@ -200,27 +200,19 @@ export async function getMemories(babyId: string, lifeStage?: string): Promise<M
 
 export async function createMemory(data: Omit<Memory, 'id' | 'created_at' | 'likes_count'>): Promise<Memory> {
   const supabase = createClient()
-  // file_size_bytes é opcional e só existe após a migration — extrair para não bloquear o insert
-  const { file_size_bytes, ...insertData } = data as typeof data & { file_size_bytes?: number }
+  const { file_size_bytes, liked_by_me, ...insertData } = data as typeof data & { file_size_bytes?: number; liked_by_me?: boolean }
   const { data: created, error } = await supabase
-    .from('memories').insert({ ...insertData, likes_count: 0 }).select().single()
+    .from('memories')
+    .insert({ ...insertData, likes_count: 0, file_size_bytes: file_size_bytes ?? 0 })
+    .select().single()
   if (error) throw new Error(`[DB] ${error.message} (code: ${error.code})`)
-  // Tenta salvar tamanho separadamente — falha silenciosamente se a coluna ainda não existe
-  if (file_size_bytes && created?.id) {
-    void supabase.from('memories').update({ file_size_bytes }).eq('id', created.id)
-  }
   return created
 }
 
 export async function updateMemory(id: string, data: { title?: string; body?: string; media_url?: string | null; file_size_bytes?: number }): Promise<void> {
   const supabase = createClient()
-  const { file_size_bytes, ...rest } = data
-  const { error } = await supabase.from('memories').update(rest).eq('id', id)
-  if (error) throw error
-  // Tenta atualizar tamanho separadamente — falha silenciosamente se a coluna ainda não existe
-  if (file_size_bytes) {
-    void supabase.from('memories').update({ file_size_bytes }).eq('id', id)
-  }
+  const { error } = await supabase.from('memories').update(data).eq('id', id)
+  if (error) throw new Error(`[DB] ${error.message} (code: ${error.code})`)
 }
 
 export async function deleteMemory(id: string): Promise<void> {
@@ -239,9 +231,7 @@ export async function uploadMemoryMedia(memoryId: string, file: File, type: stri
   const folder = type === 'video' ? 'videos' : type === 'audio' ? 'audio' : 'memories'
   const { url, sizeBytes } = await uploadToR2(file, folder)
   const supabase = createClient()
-  await supabase.from('memories').update({ media_url: url }).eq('id', memoryId)
-  // Tamanho salvo separadamente — falha silenciosamente se a coluna ainda não existe
-  void supabase.from('memories').update({ file_size_bytes: sizeBytes }).eq('id', memoryId)
+  await supabase.from('memories').update({ media_url: url, file_size_bytes: sizeBytes }).eq('id', memoryId)
   return url
 }
 
