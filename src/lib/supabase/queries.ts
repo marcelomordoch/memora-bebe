@@ -217,8 +217,38 @@ export async function updateMemory(id: string, data: { title?: string; body?: st
 
 export async function deleteMemory(id: string): Promise<void> {
   const supabase = createClient()
+
+  // Busca as URLs de mídia antes de deletar o registro
+  const { data: memory } = await supabase
+    .from('memories')
+    .select('media_url, media_urls')
+    .eq('id', id)
+    .single()
+
+  // Deleta o registro do banco
   const { error } = await supabase.from('memories').delete().eq('id', id)
-  if (error) throw error
+  if (error) throw new Error(`[DB] ${error.message}`)
+
+  // Extrai as chaves R2 e deleta os arquivos do servidor
+  if (memory) {
+    const base = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL ?? '').replace(/\/$/, '')
+    const allUrls: string[] = [
+      ...(memory.media_url ? [memory.media_url] : []),
+      ...((memory.media_urls as string[] | null) ?? []),
+    ]
+    const keys = allUrls
+      .filter(u => u.startsWith(base))
+      .map(u => u.slice(base.length + 1))
+      .filter(Boolean)
+
+    if (keys.length > 0) {
+      fetch('/api/r2-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keys }),
+      }).catch(() => {})
+    }
+  }
 }
 
 export async function toggleLike(memoryId: string, userId: string): Promise<void> {
