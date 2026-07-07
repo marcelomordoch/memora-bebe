@@ -174,6 +174,7 @@ export default function PlanosPage() {
           const isActive = p.id === storagePlan
           const isFree = p.id === 'free'
           const isHighlight = 'highlight' in p && p.highlight
+          const hasBadge = isActive || (isHighlight && !isActive)
 
           return (
             <div
@@ -184,39 +185,35 @@ export default function PlanosPage() {
                 border: isActive
                   ? `2px solid ${p.color}`
                   : isHighlight ? '2px solid transparent' : '1.5px solid #E7E5F0',
-                padding: '16px',
+                padding: '14px 16px',
                 boxShadow: isHighlight ? '0 4px 20px rgba(107,83,174,0.3)' : '0 1px 6px rgba(0,0,0,0.05)',
-                position: 'relative',
-                overflow: 'hidden',
               }}
             >
-              {isActive && (
-                <div style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: isHighlight ? 'rgba(255,255,255,0.2)' : p.bg,
-                  borderRadius: 99, padding: '3px 10px',
-                  fontSize: 10, fontWeight: 700,
-                  color: isHighlight ? '#fff' : p.color,
-                  border: `1px solid ${isHighlight ? 'rgba(255,255,255,0.3)' : p.color + '33'}`,
-                }}>
-                  Plano atual
+              {/* Badge no topo, fora do fluxo de conteúdo */}
+              {hasBadge && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                  <span style={{
+                    background: isActive
+                      ? (isHighlight ? 'rgba(255,255,255,0.2)' : p.bg)
+                      : 'rgba(255,255,255,0.2)',
+                    borderRadius: 99, padding: '3px 10px',
+                    fontSize: 10, fontWeight: 700,
+                    color: isActive
+                      ? (isHighlight ? '#fff' : p.color)
+                      : '#fff',
+                    border: `1px solid ${isActive
+                      ? (isHighlight ? 'rgba(255,255,255,0.3)' : p.color + '33')
+                      : 'rgba(255,255,255,0.35)'}`,
+                  }}>
+                    {isActive ? 'Plano atual' : 'Mais popular'}
+                  </span>
                 </div>
               )}
 
-              {isHighlight && !isActive && (
-                <div style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: 'rgba(255,255,255,0.2)', borderRadius: 99, padding: '3px 10px',
-                  fontSize: 10, fontWeight: 700, color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.35)',
-                }}>
-                  Mais popular
-                </div>
-              )}
-
+              {/* Linha principal: ícone | info | preço+botão */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{
-                  width: 50, height: 50, borderRadius: 14, flexShrink: 0,
+                  width: 48, height: 48, borderRadius: 14, flexShrink: 0,
                   background: isHighlight ? 'rgba(255,255,255,0.15)' : p.bg,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -224,17 +221,17 @@ export default function PlanosPage() {
                   <span style={{ fontSize: 9, fontWeight: 700, color: isHighlight ? 'rgba(255,255,255,0.85)' : p.color, marginTop: 2 }}>{p.storage} GB</span>
                 </div>
 
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 16, color: isHighlight ? '#fff' : '#2E2C4A', margin: 0 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 15, color: isHighlight ? '#fff' : '#2E2C4A', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {p.name}
                   </p>
-                  <p style={{ fontSize: 12, color: isHighlight ? 'rgba(255,255,255,0.75)' : '#8B89B0', margin: '2px 0 0' }}>
-                    {p.storage} GB de armazenamento
+                  <p style={{ fontSize: 11, color: isHighlight ? 'rgba(255,255,255,0.7)' : '#8B89B0', margin: '2px 0 0' }}>
+                    {p.storage} GB
                   </p>
                 </div>
 
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: isFree ? 16 : 14, color: isHighlight ? '#fff' : p.color, margin: '0 0 6px' }}>
+                  <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: 13, color: isHighlight ? '#fff' : p.color, margin: '0 0 6px', whiteSpace: 'nowrap' }}>
                     {isFree ? 'Grátis' : `${fmtPrice(p.price)}/mês`}
                   </p>
                   {!isFree && (
@@ -249,6 +246,7 @@ export default function PlanosPage() {
                         fontFamily: 'Poppins, sans-serif',
                         fontWeight: 700,
                         fontSize: 12,
+                        whiteSpace: 'nowrap',
                         background: isActive
                           ? (isHighlight ? 'rgba(255,255,255,0.2)' : p.bg)
                           : isHighlight ? '#fff' : 'linear-gradient(135deg,#B79BD8,#6B53AE)',
