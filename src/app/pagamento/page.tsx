@@ -119,7 +119,7 @@ function CheckoutForm({ productName, returnUrl, onSuccess }: { productName: stri
 // ── Tela de sucesso ───────────────────────────────────────────────────────────
 function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo> }) {
   const router = useRouter()
-  const { setPlan } = useApp()
+  const { setPlan, user, setUser } = useApp()
 
   useEffect(() => {
     if (product.type === 'upgrade') {
@@ -137,7 +137,11 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: parseFloat(product.amount) }),
       }).then(r => r.json()).then(d => {
-        if (!d.success) console.error('[credit-topup]', d.error)
+        if (d.success && user) {
+          setUser({ ...user, account_credit_brl: d.newTotal })
+        } else {
+          console.error('[credit-topup]', d.error)
+        }
       }).catch(console.error)
     }
   }, []) // eslint-disable-line
