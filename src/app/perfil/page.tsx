@@ -137,7 +137,7 @@ export default function PerfilPage() {
         setDeleting(false)
         return
       }
-      window.location.replace('/login')
+      window.location.replace('/')
     } catch {
       setDeleteError('Erro ao deletar conta. Tente novamente.')
       setDeleting(false)
