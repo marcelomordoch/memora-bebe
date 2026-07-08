@@ -26,13 +26,6 @@ const links = [
     bgColor: '#E7E1F4',
   },
   {
-    label: 'Família',
-    subtitle: 'Gerencie seus familiares',
-    href: '/perfil/familia',
-    icon: 'users',
-    bgColor: '#FCE7F3',
-  },
-  {
     label: 'Mensagens para o Futuro',
     subtitle: 'Cartas para quando crescer',
     href: '/perfil/mensagens',

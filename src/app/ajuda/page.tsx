@@ -15,7 +15,11 @@ const FAQS: { category: string; icon: string; color: string; items: { q: string;
     items: [
       {
         q: 'Qual a diferença entre os planos?',
-        a: 'O plano gratuito oferece 1 GB de armazenamento para fotos e vídeos. Os planos pagos ampliam esse espaço (5 GB, 15 GB, 30 GB, 60 GB ou 100 GB) e desbloqueiam recursos extras como álbum impresso e mais membros na família.',
+        a: 'O plano gratuito oferece 1 GB de armazenamento para fotos e vídeos. Os planos pagos ampliam esse espaço (5 GB, 15 GB, 30 GB, 60 GB ou 100 GB). O álbum impresso (fotolivro) está disponível para todos os planos, inclusive o gratuito.',
+      },
+      {
+        q: 'Posso fazer um fotolivro com o plano gratuito?',
+        a: 'Sim! O álbum impresso via Phooto está disponível para todas as contas, independente do plano. Basta acessar Perfil → Álbum Impresso e seguir as instruções.',
       },
       {
         q: 'Como funciona a cobrança do plano?',
@@ -55,25 +59,6 @@ const FAQS: { category: string; icon: string; color: string; items: { q: string;
       {
         q: 'Como envio um gift card para alguém?',
         a: 'Acesse Perfil → Gift Card e escolha o valor. Após o pagamento, um código único é gerado. Você pode copiá-lo ou enviar via WhatsApp com uma mensagem personalizada.',
-      },
-    ],
-  },
-  {
-    category: 'Família e compartilhamento',
-    icon: 'users',
-    color: '#FCE7F3',
-    items: [
-      {
-        q: 'Quantas pessoas podem acessar as memórias?',
-        a: 'Dependendo do plano, você pode convidar familiares (avós, tios, padrinhos) para visualizar e curtir as memórias do bebê. O convite é feito por e-mail.',
-      },
-      {
-        q: 'Os familiares convidados precisam pagar?',
-        a: 'Não. Familiares convidados acessam gratuitamente como leitores. Apenas o responsável pela conta precisa de um plano ativo.',
-      },
-      {
-        q: 'Como faço para remover um familiar?',
-        a: 'Acesse Perfil → Família, toque no membro e selecione "Remover". O acesso é revogado imediatamente.',
       },
     ],
   },

@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import type { User, Baby, Plan } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { getBaby, signOut } from '@/lib/supabase/queries'
+import PrivacyModal from '@/components/ui/PrivacyModal'
 
 interface AppState {
   user: User | null
@@ -121,6 +122,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logout,
     }}>
       {children}
+      {user && <PrivacyModal />}
     </AppContext.Provider>
   )
 }
