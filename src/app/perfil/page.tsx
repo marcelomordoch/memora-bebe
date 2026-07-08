@@ -53,6 +53,13 @@ const links = [
     icon: 'book-open',
     bgColor: '#FDECEA',
   },
+  {
+    label: 'Ajuda',
+    subtitle: 'FAQ e falar com suporte',
+    href: '/ajuda',
+    icon: 'help-circle',
+    bgColor: '#E0F2FE',
+  },
 ]
 
 export default function PerfilPage() {
