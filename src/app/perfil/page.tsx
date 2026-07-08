@@ -73,6 +73,33 @@ export default function PerfilPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [holdProgress, setHoldProgress] = useState(0)
+  const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  const holdStart = useRef<number | null>(null)
+
+  function startHold(e: React.PointerEvent) {
+    if (deleting) return
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    holdStart.current = Date.now()
+    holdTimer.current = setInterval(() => {
+      const elapsed = Date.now() - (holdStart.current ?? Date.now())
+      const pct = Math.min((elapsed / 5000) * 100, 100)
+      setHoldProgress(pct)
+      if (pct >= 100) {
+        clearInterval(holdTimer.current!)
+        holdTimer.current = null
+        holdStart.current = null
+        setHoldProgress(0)
+        handleDeleteAccount()
+      }
+    }, 30)
+  }
+
+  function stopHold() {
+    if (holdTimer.current) { clearInterval(holdTimer.current); holdTimer.current = null }
+    holdStart.current = null
+    setHoldProgress(0)
+  }
   const [photoUrl, setPhotoUrl] = useState(baby?.photo_url ?? '')
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false)
   const signedPhotoUrl = useSignedUrl(photoUrl || null)
@@ -342,13 +369,22 @@ export default function PerfilPage() {
                 Cancelar
               </button>
               <button
-                onClick={handleDeleteAccount}
+                onPointerDown={startHold}
+                onPointerUp={stopHold}
+                onPointerLeave={stopHold}
+                onPointerCancel={stopHold}
                 disabled={deleting}
-                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#EF4444', fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 14, color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: deleting ? 0.7 : 1 }}
+                style={{ flex: 1, position: 'relative', overflow: 'hidden', padding: '12px', borderRadius: 12, border: 'none', background: '#EF4444', fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 13, color: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: deleting ? 0.7 : 1, touchAction: 'none', userSelect: 'none' }}
               >
-                {deleting
-                  ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
-                  : 'Sim, deletar'}
+                {/* Barra de progresso */}
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.25)', width: `${holdProgress}%`, transition: holdProgress === 0 ? 'width 0.2s ease' : 'none', borderRadius: 12 }} />
+                <span style={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
+                  {deleting
+                    ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                    : holdProgress > 0
+                      ? `${Math.ceil((100 - holdProgress) / 20)}s...`
+                      : 'Segure para deletar'}
+                </span>
               </button>
             </div>
           </div>
