@@ -34,10 +34,12 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     if (!name || !email || !password) { setError('Preencha todos os campos.'); return }
+    if (!acceptedTerms) { setError('Você precisa aceitar os Termos de Uso para continuar.'); return }
     if (password.length < 6) { setError('Senha deve ter pelo menos 6 caracteres.'); return }
     setLoading(true)
     setError('')
@@ -92,20 +94,58 @@ export default function RegisterPage() {
           <Input label="E-mail" type="email" placeholder="seu@email.com.br" value={email} onChange={e => setEmail(e.target.value)} />
           <Input label="Senha" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={e => setPassword(e.target.value)} />
 
+          {/* Checkbox de aceite */}
+          <button
+            type="button"
+            onClick={() => { setAcceptedTerms(v => !v); setError('') }}
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: 12,
+              background: acceptedTerms ? '#F5F2FF' : '#FAFAFA',
+              border: acceptedTerms ? '1.5px solid #C4B8E8' : '1.5px solid var(--border-strong)',
+              borderRadius: 12, padding: '12px 14px', cursor: 'pointer',
+              textAlign: 'left', width: '100%', transition: 'all 0.15s',
+            }}
+          >
+            <div style={{
+              width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
+              border: acceptedTerms ? 'none' : '2px solid #C4B8E8',
+              background: acceptedTerms ? '#6B53AE' : '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s',
+            }}>
+              {acceptedTerms && (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </div>
+            <span style={{ fontSize: 13, color: 'var(--text-body)', fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>
+              Li e concordo com os{' '}
+              <Link
+                href="/termos"
+                onClick={e => e.stopPropagation()}
+                style={{ color: 'var(--text-accent)', fontWeight: 600, textDecoration: 'underline' }}
+              >
+                Termos de Uso
+              </Link>
+              {' '}e a{' '}
+              <Link
+                href="/privacidade"
+                onClick={e => e.stopPropagation()}
+                style={{ color: 'var(--text-accent)', fontWeight: 600, textDecoration: 'underline' }}
+              >
+                Política de Privacidade
+              </Link>
+              , incluindo a limitação de responsabilidade por uso indevido e incidentes de segurança.
+            </span>
+          </button>
+
           {error && <p style={{ fontSize: 13, color: 'var(--danger)', textAlign: 'center', fontFamily: 'var(--font-body)' }}>{error}</p>}
 
-          <Button type="submit" fullWidth loading={loading} style={{ marginTop: 8 }}>
+          <Button type="submit" fullWidth loading={loading} disabled={!acceptedTerms} style={{ marginTop: 4 }}>
             Criar conta
           </Button>
         </form>
-
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>
-          Ao criar uma conta, você concorda com os{' '}
-          <Link href="/termos" style={{ color: 'var(--text-accent)', fontWeight: 500, textDecoration: 'none' }}>Termos de Uso</Link>
-          {' '}e{' '}
-          <Link href="/privacidade" style={{ color: 'var(--text-accent)', fontWeight: 500, textDecoration: 'none' }}>Política de Privacidade</Link>
-          {' '}do Memora Bebê.
-        </p>
 
         <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>
           Já tem conta?{' '}
