@@ -137,16 +137,10 @@ export default function TutorialModal() {
 
         <div style={{ padding: '18px 18px 14px' }}>
           {/* Header row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-body)', background: 'var(--violet-50)', borderRadius: 999, padding: '3px 10px' }}>
               {step + 1} / {STEPS.length}
             </span>
-            <button
-              onClick={close}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', padding: '2px 6px' }}
-            >
-              Pular
-            </button>
           </div>
 
           {/* Content */}
