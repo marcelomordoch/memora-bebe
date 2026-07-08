@@ -117,7 +117,7 @@ function CheckoutForm({ productName, returnUrl, onSuccess }: { productName: stri
 }
 
 // ── Tela de sucesso ───────────────────────────────────────────────────────────
-function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo> }) {
+function SuccessScreen({ product, creditUsed = 0 }: { product: ReturnType<typeof getProductInfo>; creditUsed?: number }) {
   const router = useRouter()
   const { setPlan, user, setUser } = useApp()
   const [giftCode, setGiftCode] = useState<string | null>(null)
@@ -131,10 +131,16 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
       fetch('/api/upgrade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ billing: product.billing, plan: product.plan }),
+        body: JSON.stringify({ billing: product.billing, plan: product.plan, creditUsed }),
       }).then(r => r.json()).then(d => {
-        if (!d.success) console.error('[upgrade]', d.error)
+        if (d.success && user) {
+          setUser({ ...user, account_credit_brl: d.newCredit ?? Math.max(0, (user.account_credit_brl ?? 0) - creditUsed) })
+        } else if (!d.success) {
+          console.error('[upgrade]', d.error)
+        }
       }).catch(console.error)
+      // Auto-redireciona para planos após 3s
+      setTimeout(() => router.push('/perfil/planos'), 3000)
     } else if (product.type === 'credit') {
       fetch('/api/credit-topup', {
         method: 'POST',
@@ -147,6 +153,7 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
           console.error('[credit-topup]', d.error)
         }
       }).catch(console.error)
+      setTimeout(() => router.push('/perfil/planos'), 3000)
     } else if (product.type === 'giftcard') {
       fetch('/api/gift-card/create', {
         method: 'POST',
@@ -212,9 +219,9 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
         </h2>
         <p style={{ fontSize: 15, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', lineHeight: 1.6 }}>
           {product.type === 'upgrade'
-            ? 'Seu plano Premium foi ativado. Aproveite todos os recursos!'
+            ? 'Plano ativado! Redirecionando para seus planos...'
             : product.type === 'credit'
-            ? `R$ ${parseFloat(product.amount).toFixed(2).replace('.', ',')} adicionados ao seu saldo de créditos!`
+            ? `R$ ${parseFloat(product.amount).toFixed(2).replace('.', ',')} adicionados ao saldo. Redirecionando...`
             : 'Gift Card gerado com sucesso!'}
         </p>
       </div>
@@ -431,7 +438,7 @@ function PagamentoContent() {
       </div>
 
       {success ? (
-        <SuccessScreen product={product} />
+        <SuccessScreen product={product} creditUsed={creditUsed} />
       ) : (
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
 
@@ -440,8 +447,8 @@ function PagamentoContent() {
             <span style={{ fontSize: 36 }}>{product.icon}</span>
             <div style={{ flex: 1 }}>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15, color: 'var(--text-strong)', margin: 0 }}>{product.name}</p>
-              <p style={{ fontSize: 13, color: (couponFree || isFreeWithCredit) ? 'var(--success)' : 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0, fontWeight: (couponFree || isFreeWithCredit) ? 700 : 400 }}>
-                {(couponFree || isFreeWithCredit) ? 'Grátis 🎉' : product.price}
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0 }}>
+                {product.price}
               </p>
             </div>
           </div>
