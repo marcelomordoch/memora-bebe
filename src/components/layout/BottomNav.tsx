@@ -3,9 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
+import { useApp } from '@/contexts/AppContext'
 
 export default function BottomNav() {
   const path = usePathname()
+  const { baby } = useApp()
+
+  if (!baby?.id || path.startsWith('/criar-bebe') || path.startsWith('/onboarding')) return null
 
   return (
     <div style={{
