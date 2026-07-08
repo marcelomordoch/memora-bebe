@@ -171,6 +171,7 @@ function ImageViewer({
   const liked = memory.liked_by_me
   const count = memory.likes_count
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [sheetExpanded, setSheetExpanded] = useState(true)
 
   // Navegação de múltiplas fotos
   const allUrls = memory.media_urls?.length ? memory.media_urls : memory.media_url ? [memory.media_url] : []
@@ -281,24 +282,34 @@ function ImageViewer({
         </div>
       )}
 
-      {/* Bottom – white sheet: auto-sizes to content, scrolls when long */}
+      {/* Bottom – white sheet: collapsible */}
       <div
         style={{
           flexShrink: 0,
-          maxHeight: '72%',
+          maxHeight: sheetExpanded ? '72%' : '72px',
           background: '#fff',
           borderRadius: '24px 24px 0 0',
-          padding: '12px 24px 32px',
+          padding: '0 24px 32px',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
-          overflowY: 'auto',
+          overflowY: sheetExpanded ? 'auto' : 'hidden',
+          transition: 'max-height 0.32s cubic-bezier(0.4,0,0.2,1)',
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+        {/* Drag handle — tap to toggle */}
+        <div
+          onClick={() => setSheetExpanded(v => !v)}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 2px', cursor: 'pointer', userSelect: 'none', flexShrink: 0 }}
+        >
           <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
+          <Icon
+            name={sheetExpanded ? 'chevron-down' : 'chevron-up'}
+            size={16}
+            color="var(--text-muted)"
+            strokeWidth={2.5}
+          />
         </div>
 
         {/* Date + age */}
