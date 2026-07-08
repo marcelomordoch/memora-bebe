@@ -20,7 +20,7 @@ function formatCode(raw: string): string {
 function ResgatarContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const { user } = useApp();
+  const { user, setUser } = useApp();
   const [code, setCode] = useState(() => formatCode(params.get('code') ?? ''));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,6 +38,7 @@ function ResgatarContent() {
     try {
       const result = await redeemGiftCard(code, user.id);
       setRedeemedAmount(result.amount);
+      setUser({ ...user, account_credit_brl: (user.account_credit_brl ?? 0) + result.amount });
     } catch (err: any) {
       setError(err.message ?? 'Código inválido ou já utilizado');
     } finally {
@@ -77,8 +78,8 @@ function ResgatarContent() {
               }}>
                 {formatAmount(redeemedAmount)} adicionados ao seu saldo
               </p>
-              <Button variant="primary" fullWidth onClick={() => router.push('/perfil/loja/gift-cards')}>
-                Ir para Gift Cards
+              <Button variant="primary" fullWidth onClick={() => router.push('/perfil/planos')}>
+                Ver planos disponíveis
               </Button>
             </div>
           ) : (
