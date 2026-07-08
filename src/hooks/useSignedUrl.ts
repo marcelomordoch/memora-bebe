@@ -60,7 +60,7 @@ export function useSignedUrl(url: string | null | undefined): string | undefined
     let cancelled = false
     fetchSigned(url)
       .then(s => { if (!cancelled) setSigned(s) })
-      .catch(() => { if (!cancelled) setSigned(url) }) // fallback on error
+      .catch(() => { if (!cancelled) setSigned(undefined) })
     return () => { cancelled = true }
   }, [url])
 

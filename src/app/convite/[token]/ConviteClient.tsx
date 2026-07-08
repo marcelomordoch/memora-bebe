@@ -97,14 +97,12 @@ export default function ConviteClient({ invite, token }: Props) {
       <div style={{ background: '#fff', borderRadius: 24, padding: '32px 28px', width: '100%', maxWidth: 380, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', marginBottom: 24, textAlign: 'center' }}>
         <div style={{
           width: 88, height: 88, borderRadius: '50%',
-          background: baby?.photo_url ? undefined : 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)',
-          backgroundImage: baby?.photo_url ? `url(${baby.photo_url})` : undefined,
-          backgroundSize: 'cover', backgroundPosition: 'center',
+          background: 'linear-gradient(135deg,#B79BD8,#6B53AE,#4E4490)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 44, margin: '0 auto 16px',
           border: '3px solid #fff', boxShadow: '0 4px 16px rgba(107,83,174,0.3)',
         }}>
-          {!baby?.photo_url && '👶'}
+          👶
         </div>
 
         <h2 style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 22, color: '#2E2C4A', margin: '0 0 6px' }}>
