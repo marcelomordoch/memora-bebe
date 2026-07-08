@@ -127,20 +127,26 @@ function SuccessScreen({ product, creditUsed = 0 }: { product: ReturnType<typeof
 
   useEffect(() => {
     if (product.type === 'upgrade') {
-      setPlan('premium')
       fetch('/api/upgrade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ billing: product.billing, plan: product.plan, creditUsed }),
       }).then(r => r.json()).then(d => {
         if (d.success && user) {
-          setUser({ ...user, account_credit_brl: d.newCredit ?? Math.max(0, (user.account_credit_brl ?? 0) - creditUsed) })
+          setPlan('premium')
+          setUser({
+            ...user,
+            plan: 'premium',
+            storage_plan: d.plan,
+            storage_limit_gb: d.storageLimitGb,
+            plan_expires_at: d.expiresAt,
+            account_credit_brl: d.newCredit ?? Math.max(0, (user.account_credit_brl ?? 0) - creditUsed),
+          })
         } else if (!d.success) {
           console.error('[upgrade]', d.error)
         }
-      }).catch(console.error)
-      // Auto-redireciona para planos após 3s
-      setTimeout(() => router.push('/perfil/planos'), 3000)
+        router.push('/perfil/planos')
+      }).catch(e => { console.error(e); router.push('/perfil/planos') })
     } else if (product.type === 'credit') {
       fetch('/api/credit-topup', {
         method: 'POST',
