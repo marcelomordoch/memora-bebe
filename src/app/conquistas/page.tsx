@@ -32,12 +32,6 @@ const ACHIEVEMENT_ACTIONS: Record<string, { href: string; label: string }> = {
   'marco-mes':          { href: '/memorias',         label: 'Continue registrando' },
   'tres-meses':         { href: '/compor',           label: 'Mantenha a sequência' },
   'albumzinho':         { href: '/compor',           label: 'Completar o álbum' },
-  'primeiro-membro':    { href: '/perfil',           label: 'Convidar familiar' },
-  'familia-unida':      { href: '/perfil',           label: 'Convidar mais familiares' },
-  'grande-familia':     { href: '/perfil',           label: 'Convidar mais familiares' },
-  'familia-completa':   { href: '/perfil',           label: 'Convidar a família toda' },
-  'voz-familia':        { href: '/perfil',           label: 'Engajar familiares' },
-  'raizes-vivas':       { href: '/perfil',           label: 'Engajar familiares' },
   'mensagem-tempo':     { href: '/perfil/mensagens', label: 'Criar mensagem para o futuro' },
   'tres-mensagens':     { href: '/perfil/mensagens', label: 'Criar mais mensagens' },
   'cinco-mensagens':    { href: '/perfil/mensagens', label: 'Criar mais mensagens' },
@@ -101,9 +95,11 @@ export default function ConquistasPage() {
   const totalXP = achievements.filter(a => a.unlocked).reduce((s, a) => s + a.xp, 0)
   const { label: levelLabel, progress, detail } = levelFromXP(totalXP)
 
-  const filtered = achievements.filter(a =>
-    tab === 'todas' ? true : tab === 'alcancadas' ? a.unlocked : !a.unlocked
-  )
+  const FAMILY_IDS = new Set(['primeiro-membro','familia-unida','grande-familia','familia-completa','voz-familia','raizes-vivas'])
+
+  const filtered = achievements
+    .filter(a => !FAMILY_IDS.has(a.id))
+    .filter(a => tab === 'todas' ? true : tab === 'alcancadas' ? a.unlocked : !a.unlocked)
 
   return (
     <AppShell>

@@ -29,13 +29,6 @@ const ACHIEVEMENTS_LIST: Omit<Achievement, 'unlocked' | 'unlocked_at'>[] = [
   { id: 'marco-mes',          title: 'Marco do Mês',            description: 'Registrou memórias por 30 dias seguidos',     xp: 500,  icon: 'award'      },
   { id: 'tres-meses',         title: 'Constância Total',        description: 'Registrou memórias por 3 meses seguidos',     xp: 750,  icon: 'trophy'     },
   { id: 'albumzinho',         title: 'Álbum Completo',          description: 'Criou todos os tipos de memória (foto, vídeo, áudio e história)', xp: 400, icon: 'package' },
-  // Família
-  { id: 'primeiro-membro',    title: 'Família Presente',        description: 'Convidou o primeiro familiar',                xp: 100,  icon: 'users'      },
-  { id: 'familia-unida',      title: 'Família Unida',           description: 'Convidou 3 familiares',                       xp: 250,  icon: 'users'      },
-  { id: 'grande-familia',     title: 'Grande Família',          description: 'Convidou 5 familiares',                       xp: 400,  icon: 'users'      },
-  { id: 'familia-completa',   title: 'Família Completa',        description: 'Convidou 10 ou mais familiares',              xp: 750,  icon: 'home'       },
-  { id: 'voz-familia',        title: 'Vozes da Família',        description: '3 familiares participaram ativamente',        xp: 300,  icon: 'message-circle' },
-  { id: 'raizes-vivas',       title: 'Raízes Vivas',            description: '5 familiares participaram ativamente',        xp: 500,  icon: 'heart'      },
   // Mensagens do futuro
   { id: 'mensagem-tempo',     title: 'Mensagem no Tempo',       description: 'Criou uma mensagem para o futuro',            xp: 250,  icon: 'clock'      },
   { id: 'tres-mensagens',     title: 'Viajante do Tempo',       description: 'Criou 3 mensagens para o futuro',             xp: 400,  icon: 'clock'      },

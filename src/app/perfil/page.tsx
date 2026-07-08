@@ -5,7 +5,7 @@ import Link from 'next/link'
 import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { getAchievements, getFamilyMembers, uploadBabyPhoto, updateBaby } from '@/lib/supabase/queries'
+import { getAchievements, uploadBabyPhoto, updateBaby } from '@/lib/supabase/queries'
 import { calculateCurrentWeek, formatLocalDate } from '@/lib/utils'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import InstallButton from '@/components/ui/InstallButton'
@@ -60,7 +60,6 @@ export default function PerfilPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [achievementsCount, setAchievementsCount] = useState(0)
-  const [familyCount, setFamilyCount] = useState(0)
   const [totalXP, setTotalXP] = useState(0)
   const [photoUploading, setPhotoUploading] = useState(false)
 
@@ -116,9 +115,6 @@ export default function PerfilPage() {
       const unlocked = list.filter((a) => a.unlocked)
       setAchievementsCount(unlocked.length)
       setTotalXP(unlocked.reduce((s, a) => s + (a.xp ?? 0), 0))
-    }).catch(() => {})
-    getFamilyMembers(baby.id).then((list) => {
-      setFamilyCount(list.length)
     }).catch(() => {})
   }, [baby?.id])
 
@@ -288,10 +284,9 @@ export default function PerfilPage() {
       <div style={{ margin: '16px 20px', background: '#fff', borderRadius: 16, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', display: 'flex' }}>
         {[
           { label: 'Marcos', value: String(achievementsCount) },
-          { label: 'XP', value: String(totalXP) },
-          { label: 'Família', value: String(familyCount) },
+          { label: 'XP Total', value: String(totalXP) },
         ].map((stat, i) => (
-          <div key={stat.label} style={{ flex: 1, padding: '14px 0', textAlign: 'center', borderRight: i < 2 ? '1px solid #E7E5F0' : 'none' }}>
+          <div key={stat.label} style={{ flex: 1, padding: '14px 0', textAlign: 'center', borderRight: i < 1 ? '1px solid #E7E5F0' : 'none' }}>
             <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: 17, color: '#6B53AE' }}>{stat.value}</div>
             <div style={{ fontSize: 11, color: '#8B89B0', marginTop: 2 }}>{stat.label}</div>
           </div>

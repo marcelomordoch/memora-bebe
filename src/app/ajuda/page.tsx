@@ -73,7 +73,7 @@ const FAQS: { category: string; icon: string; color: string; items: { q: string;
       },
       {
         q: 'Minhas fotos e vídeos ficam privados?',
-        a: 'Sim. Suas mídias são armazenadas de forma segura e só podem ser acessadas por você e pelos familiares que você convidou. Ninguém fora da sua família tem acesso.',
+        a: 'Sim. Suas mídias são armazenadas de forma segura e criptografada. Só você tem acesso ao conteúdo da sua conta.',
       },
       {
         q: 'Posso excluir uma memória?',
