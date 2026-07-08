@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PROTECTED = [
   '/inicio', '/memorias', '/compor', '/conquistas',
-  '/perfil', '/planos', '/pagamento', '/notificacoes',
+  '/perfil', '/planos', '/pagamento', '/notificacoes', '/admin',
 ]
 const AUTH_ROUTES = ['/login', '/register', '/onboarding']
 
