@@ -170,17 +170,28 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
   function buildWhatsAppUrl(code: string) {
     const amount = parseFloat(product.amount).toFixed(2).replace('.', ',')
     const redeemUrl = `https://memora-bebe.vercel.app/perfil/loja/gift-cards/resgatar?code=${code}`
-    const text = [
-      'Oi! Tenho um presente especial para você 💜',
-      '',
-      `Um Gift Card do Memora Bebê no valor de *R$ ${amount}*.`,
-      '',
-      '👇 Clique no link para resgatar automaticamente:',
-      redeemUrl,
-      '',
-      `Ou use o código: *${code}*`,
-    ].join('\n')
-    return `https://wa.me/?text=${encodeURIComponent(text)}`
+    const lines: string[] = []
+
+    if (product.senderName) {
+      lines.push(`Oi, *${product.senderName}*! Tenho um presente especial para você 💜`)
+    } else {
+      lines.push('Oi! Tenho um presente especial para você 💜')
+    }
+    lines.push('')
+    lines.push(`Um Gift Card do Memora Bebê no valor de *R$ ${amount}*.`)
+
+    if (product.message) {
+      lines.push('')
+      lines.push(`_"${product.message}"_`)
+    }
+
+    lines.push('')
+    lines.push('👇 Clique no link para resgatar:')
+    lines.push(redeemUrl)
+    lines.push('')
+    lines.push(`Ou use o código: *${code}*`)
+
+    return `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`
   }
 
   function handleCopy(code: string) {
@@ -377,12 +388,12 @@ function PagamentoContent() {
   const [error, setError] = useState('')
   const [couponFree, setCouponFree] = useState(false)
 
-  // Crédito disponível da conta (não aplica crédito para comprar crédito)
-  const credit = product.type === 'credit' ? 0 : (user?.account_credit_brl ?? 0)
+  // Crédito só se aplica em upgrades de plano (não em compra de crédito nem gift card)
+  const credit = product.type === 'upgrade' ? (user?.account_credit_brl ?? 0) : 0
   const originalAmount = parseFloat(product.amount)
   const creditUsed = Math.min(credit, originalAmount)
   const finalAmount = Math.max(0.50, originalAmount - creditUsed).toFixed(2)
-  const isFreeWithCredit = product.type !== 'credit' && credit >= originalAmount
+  const isFreeWithCredit = product.type === 'upgrade' && credit >= originalAmount
 
   useEffect(() => {
     if (isFreeWithCredit) { setLoading(false); return }
