@@ -15,6 +15,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'fileName e contentType são obrigatórios' }, { status: 400 })
     }
 
+    // Check storage quota before generating upload URL
+    const { data: profile } = await supabase.from('profiles').select('storage_limit_gb').eq('id', user.id).single()
+    const limitBytes = (profile?.storage_limit_gb ?? 1) * 1024 * 1024 * 1024
+
+    const { data: babies } = await supabase.from('babies').select('id').eq('user_id', user.id)
+    const babyIds = (babies ?? []).map((b: { id: string }) => b.id)
+    let usedBytes = 0
+    if (babyIds.length > 0) {
+      const { data: usage } = await supabase.from('memories').select('file_size_bytes').in('baby_id', babyIds)
+      usedBytes = (usage ?? []).reduce((s: number, m: { file_size_bytes: number | null }) => s + (m.file_size_bytes ?? 0), 0)
+    }
+
+    if (usedBytes >= limitBytes) {
+      return NextResponse.json(
+        { error: `Armazenamento cheio (${(usedBytes / 1024 / 1024 / 1024).toFixed(2)} GB usados de ${profile?.storage_limit_gb ?? 1} GB). Faça upgrade para continuar.` },
+        { status: 403 }
+      )
+    }
+
     const safeFolder = ['memories', 'videos', 'audio', 'babies'].includes(folder) ? folder : 'memories'
     const sanitized = fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
     const key = `${safeFolder}/${user.id}/${Date.now()}_${sanitized}`

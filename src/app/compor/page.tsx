@@ -26,7 +26,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
           Recurso Premium 👑
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', textAlign: 'center', margin: 0 }}>
-          Faça upgrade para enviar fotos, vídeos e áudios para as memórias de {'{bebê}'}.
+          Faça upgrade para enviar vídeos e áudios para as memórias de {'{bebê}'}.
         </p>
         <Link href="/planos" style={{ display: 'block', width: '100%', padding: '15px 0', borderRadius: 16, background: 'var(--gradient-brand)', color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, textAlign: 'center', textDecoration: 'none', boxShadow: 'var(--shadow-accent)' }} onClick={onClose}>
           Ver Planos Premium
@@ -237,7 +237,7 @@ function MediaForm({
 
 // ── Page ────────────────────────────────────────────────────────────────────────
 const TYPE_CARDS = [
-  { type: 'foto',     label: 'Foto',     icon: 'camera',    iconColor: '#6B53AE', tileBg: '#E7E1F4', free: false },
+  { type: 'foto',     label: 'Foto',     icon: 'camera',    iconColor: '#6B53AE', tileBg: '#E7E1F4', free: true  },
   { type: 'video',    label: 'Vídeo',    icon: 'video',     iconColor: '#C76FB0', tileBg: '#F9E7F2', free: false },
   { type: 'audio',    label: 'Áudio',    icon: 'mic',       iconColor: '#4F9E7C', tileBg: '#E2F1EA', free: false },
   { type: 'historia', label: 'História', icon: 'file-text', iconColor: '#C9974A', tileBg: '#F5ECD8', free: true  },
