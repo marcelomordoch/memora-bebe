@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import StatusBar from '@/components/ui/StatusBar';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import Button from '@/components/ui/Button';
@@ -9,7 +9,6 @@ import Icon from '@/components/ui/Icon';
 import AppShell from '@/components/layout/AppShell';
 import { useApp } from '@/contexts/AppContext';
 import { redeemGiftCard } from '@/lib/supabase/queries';
-import type { GiftCard } from '@/types';
 
 // Auto-formats input into XXXX-XXXX-XXXX-XXXX
 function formatCode(raw: string): string {
@@ -18,10 +17,11 @@ function formatCode(raw: string): string {
   return parts.slice(0, 4).join('-');
 }
 
-export default function ResgatarGiftCardPage() {
+function ResgatarContent() {
   const router = useRouter();
+  const params = useSearchParams();
   const { user } = useApp();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => formatCode(params.get('code') ?? ''));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [redeemedAmount, setRedeemedAmount] = useState<number | null>(null);
@@ -77,8 +77,8 @@ export default function ResgatarGiftCardPage() {
               }}>
                 {formatAmount(redeemedAmount)} adicionados ao seu saldo
               </p>
-              <Button variant="primary" fullWidth onClick={() => router.push('/perfil/loja')}>
-                Ir para a Loja
+              <Button variant="primary" fullWidth onClick={() => router.push('/perfil/loja/gift-cards')}>
+                Ir para Gift Cards
               </Button>
             </div>
           ) : (
@@ -161,5 +161,18 @@ export default function ResgatarGiftCardPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function ResgatarGiftCardPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ width: 28, height: 28, border: '3px solid #E7E5F0', borderTopColor: '#6B53AE', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <ResgatarContent />
+    </Suspense>
   );
 }

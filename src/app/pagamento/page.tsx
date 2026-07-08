@@ -169,15 +169,16 @@ function SuccessScreen({ product }: { product: ReturnType<typeof getProductInfo>
 
   function buildWhatsAppUrl(code: string) {
     const amount = parseFloat(product.amount).toFixed(2).replace('.', ',')
+    const redeemUrl = `https://memora-bebe.vercel.app/perfil/loja/gift-cards/resgatar?code=${code}`
     const text = [
       'Oi! Tenho um presente especial para você 💜',
       '',
       `Um Gift Card do Memora Bebê no valor de *R$ ${amount}*.`,
-      'Use o código abaixo no app para resgatar:',
       '',
-      `*${code}*`,
+      '👇 Clique no link para resgatar automaticamente:',
+      redeemUrl,
       '',
-      '📱 Acesse: https://memora-bebe.vercel.app',
+      `Ou use o código: *${code}*`,
     ].join('\n')
     return `https://wa.me/?text=${encodeURIComponent(text)}`
   }
