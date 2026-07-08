@@ -8,7 +8,7 @@ import StatusBar from '@/components/ui/StatusBar'
 import ScreenHeader from '@/components/ui/ScreenHeader'
 import Icon from '@/components/ui/Icon'
 
-const ADMIN_EMAIL = 'marcelomord@gmail.com'
+const ADMIN_EMAILS = ['marcelomord@gmail.com', 'joaoitaki@gmail.com']
 const CATEGORIES = ['Roupinhas', 'Brinquedos', 'Higiene', 'Alimentação', 'Quarto', 'Passeio', 'Outros']
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ export default function AdminParceirosPage() {
 
   // Auth guard
   useEffect(() => {
-    if (user && user.email !== ADMIN_EMAIL) router.replace('/inicio')
+    if (user && !ADMIN_EMAILS.includes(user.email)) router.replace('/inicio')
   }, [user])
 
   useEffect(() => { fetchBanners() }, [])

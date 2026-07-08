@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-const ADMIN_EMAIL = 'marcelomord@gmail.com'
+const ADMIN_EMAILS = ['marcelomord@gmail.com', 'joaoitaki@gmail.com']
 
 const SEED_BANNERS = [
   { partner_name: 'Amazon Baby', image_url: 'https://picsum.photos/seed/amazon-baby-banner/800/280', link_url: 'https://www.amazon.com.br/s?k=produtos+para+bebe&tag=memorabebe-20', is_active: true, sort_order: 0 },
@@ -60,7 +60,7 @@ export async function POST() {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.email !== ADMIN_EMAIL) {
+  if (!user || !ADMIN_EMAILS.includes(user.email!)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
   }
 
