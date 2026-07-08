@@ -21,8 +21,12 @@ export default function NovaSenhaPage() {
     e.preventDefault()
     setError('')
 
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.')
+    if (password.length < 8) {
+      setError('A senha deve ter pelo menos 8 caracteres.')
+      return
+    }
+    if (!/[^a-zA-Z0-9]/.test(password)) {
+      setError('A senha deve conter pelo menos um caractere especial (!@#$%...).')
       return
     }
     if (password !== confirm) {
@@ -86,13 +90,25 @@ export default function NovaSenhaPage() {
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <Input
-                label="Nova senha"
-                type="password"
-                placeholder="Mínimo 6 caracteres"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
+              <div>
+                <Input
+                  label="Nova senha"
+                  type="password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
+                {password.length > 0 && (
+                  <div style={{ display: 'flex', gap: 16, marginTop: 8, paddingLeft: 2 }}>
+                    <span style={{ fontSize: 12, fontFamily: 'var(--font-body)', color: password.length >= 8 ? '#059669' : '#8B89B0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {password.length >= 8 ? '✓' : '○'} 8 caracteres
+                    </span>
+                    <span style={{ fontSize: 12, fontFamily: 'var(--font-body)', color: /[^a-zA-Z0-9]/.test(password) ? '#059669' : '#8B89B0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {/[^a-zA-Z0-9]/.test(password) ? '✓' : '○'} caractere especial
+                    </span>
+                  </div>
+                )}
+              </div>
               <Input
                 label="Confirmar senha"
                 type="password"

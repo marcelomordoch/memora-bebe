@@ -15,7 +15,7 @@ function translateError(msg: string): string {
     return 'Já existe uma conta com esse e-mail.'
   }
   if (msg.includes('Password should be')) {
-    return 'Senha deve ter pelo menos 6 caracteres.'
+    return 'Senha deve ter pelo menos 8 caracteres e um caractere especial.'
   }
   if (msg.includes('invalid email') || msg.includes('Invalid email')) {
     return 'E-mail inválido.'
@@ -39,6 +39,8 @@ export default function RegisterPage() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     if (!name || !email || !password) { setError('Preencha todos os campos.'); return }
+    if (password.length < 8) { setError('A senha deve ter pelo menos 8 caracteres.'); return }
+    if (!/[^a-zA-Z0-9]/.test(password)) { setError('A senha deve conter pelo menos um caractere especial (!@#$%...).'); return }
     if (!acceptedTerms) { setError('Você precisa aceitar os Termos de Uso para continuar.'); return }
     if (password.length < 6) { setError('Senha deve ter pelo menos 6 caracteres.'); return }
     setLoading(true)
@@ -92,7 +94,19 @@ export default function RegisterPage() {
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Input label="Nome completo" type="text" placeholder="Seu nome" value={name} onChange={e => setName(e.target.value)} />
           <Input label="E-mail" type="email" placeholder="seu@email.com.br" value={email} onChange={e => setEmail(e.target.value)} />
-          <Input label="Senha" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={e => setPassword(e.target.value)} />
+          <div>
+            <Input label="Senha" type="password" placeholder="Mínimo 8 caracteres" value={password} onChange={e => setPassword(e.target.value)} />
+            {password.length > 0 && (
+              <div style={{ display: 'flex', gap: 16, marginTop: 8, paddingLeft: 2 }}>
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-body)', color: password.length >= 8 ? '#059669' : '#8B89B0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {password.length >= 8 ? '✓' : '○'} 8 caracteres
+                </span>
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-body)', color: /[^a-zA-Z0-9]/.test(password) ? '#059669' : '#8B89B0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {/[^a-zA-Z0-9]/.test(password) ? '✓' : '○'} caractere especial
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Checkbox de aceite */}
           <button
