@@ -87,16 +87,15 @@ function EditMemorySheet({
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '24px 24px 0 0', padding: '0 20px 40px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: sheetExpanded ? '90dvh' : '72px', overflowY: sheetExpanded ? 'auto' : 'hidden', transition: 'max-height 0.32s cubic-bezier(0.4,0,0.2,1)' }}
+        style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '24px 24px 0 0', padding: '0 20px 40px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: sheetExpanded ? '80dvh' : '72px', overflowY: sheetExpanded ? 'auto' : 'hidden', transition: 'max-height 0.32s cubic-bezier(0.4,0,0.2,1)' }}
       >
         {/* Handle */}
         <div
           onPointerDown={handleEditDragDown}
           onPointerUp={handleEditDragUp}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 2px', cursor: 'ns-resize', touchAction: 'none', userSelect: 'none', flexShrink: 0 }}
+          style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 2px', cursor: 'ns-resize', touchAction: 'none', userSelect: 'none', flexShrink: 0 }}
         >
           <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
-          <Icon name={sheetExpanded ? 'chevron-down' : 'chevron-up'} size={14} color="var(--text-muted)" strokeWidth={2.5} />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -318,7 +317,7 @@ function ImageViewer({
       <div
         style={{
           flexShrink: 0,
-          maxHeight: sheetExpanded ? '72%' : '72px',
+          maxHeight: sheetExpanded ? '80dvh' : '72px',
           background: '#fff',
           borderRadius: '24px 24px 0 0',
           padding: '0 24px 32px',
@@ -337,12 +336,6 @@ function ImageViewer({
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 2px', cursor: 'ns-resize', userSelect: 'none', flexShrink: 0, touchAction: 'none' }}
         >
           <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
-          <Icon
-            name={sheetExpanded ? 'chevron-down' : 'chevron-up'}
-            size={16}
-            color="var(--text-muted)"
-            strokeWidth={2.5}
-          />
         </div>
 
         {/* Date + age */}
