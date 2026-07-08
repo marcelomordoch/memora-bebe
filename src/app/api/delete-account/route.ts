@@ -68,6 +68,18 @@ export async function DELETE() {
           if (key) r2Keys.push(key)
         }
       }
+
+      const { data: futureMessages } = await admin
+        .from('future_messages')
+        .select('audio_url')
+        .in('baby_id', babyIds)
+
+      for (const msg of futureMessages ?? []) {
+        if (msg.audio_url) {
+          const key = urlToKey(msg.audio_url)
+          if (key) r2Keys.push(key)
+        }
+      }
     }
 
     // Baby photo
