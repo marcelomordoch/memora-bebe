@@ -152,7 +152,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AdminParceirosPage() {
   const router = useRouter()
-  const { user } = useApp()
+  const { user, isLoading } = useApp()
   const supabase = createClient()
 
   const [tab, setTab] = useState<'banners' | 'products'>('banners')
@@ -170,8 +170,10 @@ export default function AdminParceirosPage() {
 
   // Auth guard
   useEffect(() => {
-    if (user && !ADMIN_EMAILS.includes(user.email)) router.replace('/inicio')
-  }, [user])
+    if (isLoading) return
+    if (!user) { router.replace('/login'); return }
+    if (!ADMIN_EMAILS.includes(user.email)) router.replace('/inicio')
+  }, [user, isLoading])
 
   useEffect(() => { fetchBanners() }, [])
   useEffect(() => { fetchProducts() }, [])
@@ -228,7 +230,14 @@ export default function AdminParceirosPage() {
     setSeeding(false)
   }
 
-  if (!user) return null
+  if (isLoading || !user || !ADMIN_EMAILS.includes(user.email)) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-page)' }}>
+        <span style={{ width: 32, height: 32, border: '3px solid var(--border-subtle)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
 
   const filteredProducts = catFilter === 'Todas' ? products : products.filter(p => p.category === catFilter)
 
