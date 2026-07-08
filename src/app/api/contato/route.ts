@@ -36,7 +36,7 @@ ${message}
     `.trim()
 
     const { error } = await resend.emails.send({
-      from: 'Memora Bebê Suporte <noreply@memorabebe.com.br>',
+      from: 'Memora Bebê Suporte <onboarding@resend.dev>',
       to: SUPPORT_EMAIL,
       replyTo: email,
       subject: `[Suporte] ${subject} — ${name}`,
