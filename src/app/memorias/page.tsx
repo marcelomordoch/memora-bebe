@@ -520,6 +520,8 @@ function MemoryCard({
 export default function MemoriasPage() {
   const { baby, user } = useApp()
   const [activeFilter, setActiveFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const [allMemories, setAllMemories] = useState<Memory[]>([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState<Memory | null>(null)
@@ -561,10 +563,11 @@ export default function MemoriasPage() {
     ...stagesPresent.map(s => ({ label: lifeStageLabel(s), value: s })),
   ]
 
-  // Client-side filter using computed stage
-  const filtered = activeFilter === 'all'
-    ? memoriesWithStage
-    : memoriesWithStage.filter(m => m._stage === activeFilter)
+  // Client-side filter: stage + keyword search
+  const q = search.trim().toLowerCase()
+  const filtered = memoriesWithStage
+    .filter(m => activeFilter === 'all' || m._stage === activeFilter)
+    .filter(m => !q || m.title.toLowerCase().includes(q) || (m.body || '').toLowerCase().includes(q))
 
   // Toggle like — optimistic update then sync with DB
   async function handleToggleLike(memoryId: string) {
@@ -628,6 +631,48 @@ export default function MemoriasPage() {
           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
             {loading ? 'Carregando...' : `${allMemories.length} memória${allMemories.length !== 1 ? 's' : ''} registrada${allMemories.length !== 1 ? 's' : ''}`}
           </p>
+
+          {/* Search bar */}
+          <div style={{
+            marginTop: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: searchFocused ? '#fff' : 'var(--surface-card)',
+            border: `1.5px solid ${searchFocused ? 'var(--accent)' : 'var(--border-subtle)'}`,
+            borderRadius: 14,
+            padding: '0 14px',
+            boxShadow: searchFocused ? '0 0 0 3px rgba(107,83,174,0.12)' : 'var(--shadow-sm)',
+            transition: 'border-color .15s, box-shadow .15s',
+          }}>
+            <Icon name="search" size={17} color={searchFocused ? 'var(--accent)' : 'var(--text-muted)'} strokeWidth={2} />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              placeholder="Buscar por palavra-chave..."
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontFamily: 'var(--font-body)',
+                fontSize: 14,
+                color: 'var(--text-strong)',
+                padding: '12px 0',
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
+              >
+                <Icon name="x" size={15} color="var(--text-muted)" strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter chips */}
@@ -694,7 +739,9 @@ export default function MemoriasPage() {
               <p style={{ fontSize: 15, margin: 0 }}>
                 {allMemories.length === 0
                   ? 'Nenhuma memória encontrada. Toque em + para criar a primeira! 💜'
-                  : 'Nenhuma memória nesta categoria.'}
+                  : q
+                    ? `Nenhuma memória encontrada para "${search}".`
+                    : 'Nenhuma memória nesta categoria.'}
               </p>
             </div>
           ) : (
