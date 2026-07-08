@@ -10,6 +10,20 @@ import AppShell from '@/components/layout/AppShell';
 import { useApp } from '@/contexts/AppContext';
 import { redeemGiftCard } from '@/lib/supabase/queries';
 
+function normalizeError(msg: string): string {
+  const m = (msg ?? '').toLowerCase()
+  if (m.includes('already') || m.includes('redeemed') || m.includes('utilizado') || m.includes('resgatado')) {
+    return 'Este gift card já foi utilizado.'
+  }
+  if (m.includes('expired') || m.includes('expirado')) {
+    return 'Este gift card está expirado.'
+  }
+  if (m.includes('invalid') || m.includes('inválid') || m.includes('not found') || m.includes('encontrado')) {
+    return 'Código inválido. Verifique e tente novamente.'
+  }
+  return 'Código inválido ou já utilizado.'
+}
+
 // Auto-formats input into XXXX-XXXX-XXXX-XXXX
 function formatCode(raw: string): string {
   const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -40,7 +54,7 @@ function ResgatarContent() {
       setRedeemedAmount(result.amount);
       setUser({ ...user, account_credit_brl: (user.account_credit_brl ?? 0) + result.amount });
     } catch (err: any) {
-      setError(err.message ?? 'Código inválido ou já utilizado');
+      setError(normalizeError(err.message));
     } finally {
       setLoading(false);
     }

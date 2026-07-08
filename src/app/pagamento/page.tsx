@@ -481,7 +481,7 @@ function PagamentoContent() {
                 boxShadow: 'var(--shadow-accent)',
               }}
             >
-              ✨ Ativar plano gratuitamente
+              {isFreeWithCredit ? `💰 Usar saldo disponível — R$ ${creditUsed.toFixed(2).replace('.', ',')}` : '✨ Ativar plano'}
             </button>
           ) : (
 <>
