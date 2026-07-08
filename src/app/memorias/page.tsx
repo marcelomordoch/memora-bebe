@@ -28,8 +28,22 @@ function EditMemorySheet({
   const [newPhotoPreview, setNewPhotoPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [sheetExpanded, setSheetExpanded] = useState(true)
   const fileRef = useRef<HTMLInputElement>(null)
+  const editDragY = useRef<number | null>(null)
   const currentMediaUrl = memory.media_url
+
+  function handleEditDragDown(e: React.PointerEvent) {
+    editDragY.current = e.clientY
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  function handleEditDragUp(e: React.PointerEvent) {
+    if (editDragY.current === null) return
+    const dy = e.clientY - editDragY.current
+    editDragY.current = null
+    if (dy > 40) setSheetExpanded(false)
+    else if (dy < -40) setSheetExpanded(true)
+  }
 
   async function handleSave() {
     if (!title.trim()) { setError('O título não pode estar vazio.'); return }
@@ -73,11 +87,16 @@ function EditMemorySheet({
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '24px 24px 0 0', padding: '20px 20px 40px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '90dvh', overflowY: 'auto' }}
+        style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '24px 24px 0 0', padding: '0 20px 40px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: sheetExpanded ? '90dvh' : '72px', overflowY: sheetExpanded ? 'auto' : 'hidden', transition: 'max-height 0.32s cubic-bezier(0.4,0,0.2,1)' }}
       >
         {/* Handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+        <div
+          onPointerDown={handleEditDragDown}
+          onPointerUp={handleEditDragUp}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 2px', cursor: 'ns-resize', touchAction: 'none', userSelect: 'none', flexShrink: 0 }}
+        >
           <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
+          <Icon name={sheetExpanded ? 'chevron-down' : 'chevron-up'} size={14} color="var(--text-muted)" strokeWidth={2.5} />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -172,6 +191,19 @@ function ImageViewer({
   const count = memory.likes_count
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [sheetExpanded, setSheetExpanded] = useState(true)
+  const dragY = useRef<number | null>(null)
+
+  function handleDragDown(e: React.PointerEvent) {
+    dragY.current = e.clientY
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  function handleDragUp(e: React.PointerEvent) {
+    if (dragY.current === null) return
+    const dy = e.clientY - dragY.current
+    dragY.current = null
+    if (dy > 40) setSheetExpanded(false)
+    else if (dy < -40) setSheetExpanded(true)
+  }
 
   // Navegação de múltiplas fotos
   const allUrls = memory.media_urls?.length ? memory.media_urls : memory.media_url ? [memory.media_url] : []
@@ -298,10 +330,11 @@ function ImageViewer({
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Drag handle — tap to toggle */}
+        {/* Drag handle */}
         <div
-          onClick={() => setSheetExpanded(v => !v)}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 2px', cursor: 'pointer', userSelect: 'none', flexShrink: 0 }}
+          onPointerDown={handleDragDown}
+          onPointerUp={handleDragUp}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 2px', cursor: 'ns-resize', userSelect: 'none', flexShrink: 0, touchAction: 'none' }}
         >
           <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
           <Icon

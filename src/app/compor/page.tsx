@@ -59,6 +59,20 @@ function MediaForm({
   const [error, setError] = useState('')
   const [compressionStage, setCompressionStage] = useState<'loading' | 'compressing' | null>(null)
   const [compressionPercent, setCompressionPercent] = useState(0)
+  const [sheetExpanded, setSheetExpanded] = useState(true)
+  const mediaDragY = useRef<number | null>(null)
+
+  function handleMediaDragDown(e: React.PointerEvent) {
+    mediaDragY.current = e.clientY
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  function handleMediaDragUp(e: React.PointerEvent) {
+    if (mediaDragY.current === null) return
+    const dy = e.clientY - mediaDragY.current
+    mediaDragY.current = null
+    if (dy > 40) setSheetExpanded(false)
+    else if (dy < -40) setSheetExpanded(true)
+  }
 
   const isPhoto = type === 'foto'
   const accept = isPhoto ? 'image/*' : 'video/*'
@@ -154,8 +168,15 @@ function MediaForm({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(18,17,26,.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)', alignSelf: 'center' }} />
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, background: '#fff', borderRadius: '24px 24px 0 0', padding: '0 20px 40px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: sheetExpanded ? '90dvh' : '72px', overflowY: sheetExpanded ? 'auto' : 'hidden', transition: 'max-height 0.32s cubic-bezier(0.4,0,0.2,1)' }}>
+        <div
+          onPointerDown={handleMediaDragDown}
+          onPointerUp={handleMediaDragUp}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 2px', cursor: 'ns-resize', touchAction: 'none', userSelect: 'none', flexShrink: 0 }}
+        >
+          <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border-strong)' }} />
+          <Icon name={sheetExpanded ? 'chevron-down' : 'chevron-up'} size={14} color="var(--text-muted)" strokeWidth={2.5} />
+        </div>
         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--text-strong)', margin: 0 }}>
           {isPhoto ? '📷 Adicionar Fotos' : '🎬 Adicionar Vídeo'}
         </h3>
