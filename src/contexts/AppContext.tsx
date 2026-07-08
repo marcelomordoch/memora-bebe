@@ -5,6 +5,7 @@ import type { User, Baby, Plan } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { getBaby, signOut } from '@/lib/supabase/queries'
 import PrivacyModal from '@/components/ui/PrivacyModal'
+import TutorialModal from '@/components/ui/TutorialModal'
 
 interface AppState {
   user: User | null
@@ -123,6 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }}>
       {children}
       {user && <PrivacyModal />}
+      {user && baby?.id && <TutorialModal />}
     </AppContext.Provider>
   )
 }
