@@ -8,7 +8,6 @@ import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
 import AppShell from '@/components/layout/AppShell';
 import { useApp } from '@/contexts/AppContext';
-import { redeemGiftCard } from '@/lib/supabase/queries';
 
 function normalizeError(msg: string): string {
   const m = (msg ?? '').toLowerCase()
@@ -50,11 +49,20 @@ function ResgatarContent() {
     setLoading(true);
     setError('');
     try {
-      const result = await redeemGiftCard(code, user.id);
-      setRedeemedAmount(result.amount);
-      setUser({ ...user, account_credit_brl: (user.account_credit_brl ?? 0) + result.amount });
-    } catch (err: any) {
-      setError(normalizeError(err.message));
+      const res = await fetch('/api/gift-card/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error ?? 'Código inválido ou já utilizado.');
+        return;
+      }
+      setRedeemedAmount(data.amount);
+      setUser({ ...user, account_credit_brl: data.newTotal });
+    } catch {
+      setError('Erro ao conectar. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -66,7 +74,10 @@ function ResgatarContent() {
     <AppShell>
       <div style={{ background: 'var(--surface-page)', minHeight: '100vh' }}>
         <StatusBar />
-        <ScreenHeader title="Resgatar Gift Card" onBack={() => router.back()} />
+        <ScreenHeader title="Resgatar Gift Card" onBack={() => {
+          if (window.history.length > 1) router.back()
+          else router.push('/perfil/loja/gift-cards')
+        }} />
 
         <div style={{ padding: '24px 16px 32px' }}>
           {redeemedAmount !== null ? (

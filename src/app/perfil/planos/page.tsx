@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import StatusBar from '@/components/ui/StatusBar'
 import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
-import { getStorageUsedBytes, redeemGiftCard } from '@/lib/supabase/queries'
+import { getStorageUsedBytes } from '@/lib/supabase/queries'
 
 // ── Preços ────────────────────────────────────────────────────────────────────
 // R2: R$0,086/GB/mês · Stripe: 3,99% + R$0,39 · Margem: 15%
@@ -78,13 +78,21 @@ function CreditSection({
     setRedeemLoading(true)
     setRedeemMsg(null)
     try {
-      const { amount } = await redeemGiftCard(code, userId)
-      setRedeemMsg({ type: 'ok', text: `R$ ${amount.toFixed(2).replace('.', ',')} adicionados ao seu saldo!` })
-      onCreditAdded(credit + amount)
+      const res = await fetch('/api/gift-card/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        setRedeemMsg({ type: 'err', text: data.error ?? 'Código inválido ou já utilizado.' })
+        return
+      }
+      setRedeemMsg({ type: 'ok', text: `R$ ${(data.amount as number).toFixed(2).replace('.', ',')} adicionados ao seu saldo!` })
+      onCreditAdded(data.newTotal)
       setGiftCode('')
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Código inválido ou já utilizado.'
-      setRedeemMsg({ type: 'err', text: msg })
+    } catch {
+      setRedeemMsg({ type: 'err', text: 'Erro ao conectar. Tente novamente.' })
     } finally {
       setRedeemLoading(false)
     }
