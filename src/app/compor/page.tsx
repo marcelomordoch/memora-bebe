@@ -238,8 +238,8 @@ function MediaForm({
 // ── Page ────────────────────────────────────────────────────────────────────────
 const TYPE_CARDS = [
   { type: 'foto',     label: 'Foto',     icon: 'camera',    iconColor: '#6B53AE', tileBg: '#E7E1F4', free: true  },
-  { type: 'video',    label: 'Vídeo',    icon: 'video',     iconColor: '#C76FB0', tileBg: '#F9E7F2', free: false },
-  { type: 'audio',    label: 'Áudio',    icon: 'mic',       iconColor: '#4F9E7C', tileBg: '#E2F1EA', free: false },
+  { type: 'video',    label: 'Vídeo',    icon: 'video',     iconColor: '#C76FB0', tileBg: '#F9E7F2', free: true  },
+  { type: 'audio',    label: 'Áudio',    icon: 'mic',       iconColor: '#4F9E7C', tileBg: '#E2F1EA', free: true  },
   { type: 'historia', label: 'História', icon: 'file-text', iconColor: '#C9974A', tileBg: '#F5ECD8', free: true  },
 ] as const
 
