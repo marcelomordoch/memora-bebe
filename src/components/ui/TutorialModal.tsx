@@ -3,41 +3,57 @@
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
-const STEPS = [
+const SKIP_PATHS = ['/criar-bebe', '/onboarding', '/register', '/login']
+
+// Horizontal alignment of the pulse ring and tooltip arrow (% from left of screen)
+type Target = null | 'fab' | 'memories' | 'achievements' | 'profile' | 'home'
+
+const STEPS: { title: string; text: string; target: Target }[] = [
   {
-    emoji: '💜',
-    title: 'Bem-vindo ao Memora Bebê!',
-    text: 'Aqui você registra cada momento especial da vida do seu bebê, de forma simples, segura e para sempre.',
+    title: 'Bem-vindo ao Memora Bebê! 💜',
+    text: 'Vamos te mostrar como usar o app. Toque em Próximo para continuar.',
+    target: null,
   },
   {
-    emoji: '📷',
-    title: 'Registre memórias',
-    text: 'Toque no botão + para adicionar fotos, vídeos, áudios e histórias. Tudo organizado num só lugar.',
+    title: 'Início',
+    text: 'Aqui você vê o resumo das últimas memórias e o progresso do seu bebê.',
+    target: 'home',
   },
   {
-    emoji: '📅',
-    title: 'Organizado por fases',
-    text: 'Suas memórias são separadas automaticamente por fase da vida: gestação, 1º ano, 2º ano e muito mais.',
+    title: 'Registrar memórias',
+    text: 'Toque no botão + para adicionar fotos, vídeos, áudios e histórias do seu bebê.',
+    target: 'fab',
   },
   {
-    emoji: '🏆',
-    title: 'Ganhe conquistas',
-    text: 'A cada memória registrada você desbloqueia conquistas e evolui na Árvore da Vida do seu bebê.',
+    title: 'Memórias',
+    text: 'Veja todas as memórias organizadas por fase da vida do bebê. Use a busca para encontrar qualquer momento.',
+    target: 'memories',
   },
   {
-    emoji: '🔒',
-    title: 'Tudo 100% privado',
-    text: 'Fotos e vídeos armazenados com segurança. Só você — e quem você convidar — tem acesso.',
+    title: 'Conquistas',
+    text: 'A cada memória registrada você desbloqueia conquistas e acumula XP na Árvore da Vida.',
+    target: 'achievements',
+  },
+  {
+    title: 'Perfil',
+    text: 'Gerencie seu perfil, plano e configurações por aqui.',
+    target: 'profile',
   },
 ]
 
-const SKIP_PATHS = ['/criar-bebe', '/onboarding', '/register', '/login']
+// Approximate horizontal center of each bottom-nav item (% of screen width)
+const TARGET_LEFT: Record<Exclude<Target, null>, string> = {
+  home:         '10%',
+  memories:     '28%',
+  fab:          '50%',
+  achievements: '72%',
+  profile:      '90%',
+}
 
 export default function TutorialModal() {
   const pathname = usePathname()
   const [visible, setVisible] = useState(false)
   const [step, setStep] = useState(0)
-  const [animating, setAnimating] = useState(false)
 
   useEffect(() => {
     const onSkipPath = SKIP_PATHS.some(p => pathname.startsWith(p))
@@ -51,123 +67,130 @@ export default function TutorialModal() {
     setVisible(false)
   }
 
-  function goTo(next: number) {
-    if (animating) return
-    setAnimating(true)
-    setTimeout(() => {
-      setStep(next)
-      setAnimating(false)
-    }, 180)
+  function next() {
+    if (step < STEPS.length - 1) setStep(s => s + 1)
+    else close()
   }
 
-  function handleNext() {
-    if (step < STEPS.length - 1) goTo(step + 1)
-    else close()
+  function prev() {
+    if (step > 0) setStep(s => s - 1)
   }
 
   if (!visible) return null
 
   const current = STEPS[step]
+  const isFirst = step === 0
   const isLast = step === STEPS.length - 1
+  const leftPct = current.target ? TARGET_LEFT[current.target] : null
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 2000,
-      background: '#fff',
-      display: 'flex', flexDirection: 'column',
-    }}>
-      {/* Barra de progresso */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'var(--border-subtle)' }}>
-        <div style={{
-          height: '100%',
-          background: 'var(--gradient-brand)',
-          width: `${((step + 1) / STEPS.length) * 100}%`,
-          transition: 'width 0.32s cubic-bezier(0.4,0,0.2,1)',
-          borderRadius: '0 999px 999px 0',
-        }} />
-      </div>
+    <>
+      {/* Pulse ring on the target nav item */}
+      {current.target && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 'calc(env(safe-area-inset-bottom, 16px) + 4px)',
+            left: leftPct!,
+            transform: 'translateX(-50%)',
+            width: current.target === 'fab' ? 64 : 52,
+            height: current.target === 'fab' ? 64 : 52,
+            borderRadius: '50%',
+            border: '2.5px solid #6B53AE',
+            animation: 'tour-pulse 1.4s ease-out infinite',
+            pointerEvents: 'none',
+            zIndex: 1998,
+          }}
+        />
+      )}
 
-      {/* Pular */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '52px 24px 0' }}>
-        {!isLast && (
-          <button
-            onClick={close}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', padding: '4px 8px' }}
-          >
-            Pular
-          </button>
-        )}
-      </div>
-
-      {/* Conteúdo do slide */}
+      {/* Tooltip card */}
       <div
         style={{
-          flex: 1,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          padding: '0 36px', textAlign: 'center', gap: 28,
-          opacity: animating ? 0 : 1,
-          transform: animating ? 'translateY(10px)' : 'translateY(0)',
-          transition: 'opacity 0.18s ease, transform 0.18s ease',
+          position: 'fixed',
+          bottom: 'calc(env(safe-area-inset-bottom, 16px) + 86px)',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'calc(100% - 32px)',
+          maxWidth: 390,
+          background: 'var(--surface-card)',
+          borderRadius: 20,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+          zIndex: 1999,
+          overflow: 'visible',
         }}
       >
-        <div style={{
-          width: 120, height: 120, borderRadius: 32,
-          background: 'var(--violet-100)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 64, lineHeight: 1,
-          boxShadow: '0 8px 32px rgba(107,83,174,0.18)',
-        }}>
-          {current.emoji}
-        </div>
+        {/* Arrow pointing down to the target */}
+        {current.target && (
+          <div style={{
+            position: 'absolute',
+            bottom: -9,
+            left: leftPct!,
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '9px solid transparent',
+            borderRight: '9px solid transparent',
+            borderTop: '9px solid var(--surface-card)',
+          }} />
+        )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <h1 style={{
-            fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26,
-            color: 'var(--text-strong)', margin: 0, lineHeight: 1.25,
-          }}>
+        <div style={{ padding: '18px 18px 14px' }}>
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-body)', background: 'var(--violet-50)', borderRadius: 999, padding: '3px 10px' }}>
+              {step + 1} / {STEPS.length}
+            </span>
+            <button
+              onClick={close}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', padding: '2px 6px' }}
+            >
+              Pular
+            </button>
+          </div>
+
+          {/* Content */}
+          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--text-strong)', margin: '0 0 6px' }}>
             {current.title}
-          </h1>
-          <p style={{
-            fontSize: 16, color: 'var(--text-muted)', fontFamily: 'var(--font-body)',
-            lineHeight: 1.65, margin: 0,
-          }}>
+          </h3>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 14px' }}>
             {current.text}
           </p>
-        </div>
-      </div>
 
-      {/* Dots + botão */}
-      <div style={{ padding: '0 24px 52px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {STEPS.map((_, i) => (
+          {/* Progress dots */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 14 }}>
+            {STEPS.map((_, i) => (
+              <div key={i} style={{ width: i === step ? 18 : 6, height: 6, borderRadius: 999, background: i === step ? 'var(--accent)' : 'var(--border-strong)', transition: 'width 0.2s, background 0.2s' }} />
+            ))}
+          </div>
+
+          {/* Navigation */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            {!isFirst && (
+              <button
+                onClick={prev}
+                style={{ flex: 1, padding: '11px 0', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--surface-card)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--text-body)', cursor: 'pointer' }}
+              >
+                ← Anterior
+              </button>
+            )}
             <button
-              key={i}
-              onClick={() => i < step && goTo(i)}
-              style={{
-                width: i === step ? 24 : 8, height: 8,
-                borderRadius: 999,
-                background: i === step ? 'var(--accent)' : i < step ? 'var(--border-strong)' : 'var(--border-subtle)',
-                border: 'none', padding: 0, cursor: i < step ? 'pointer' : 'default',
-                transition: 'width 0.22s, background 0.22s',
-              }}
-            />
-          ))}
+              onClick={next}
+              style={{ flex: 2, padding: '11px 0', borderRadius: 12, border: 'none', background: 'var(--gradient-brand)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: '#fff', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
+            >
+              {isLast ? 'Concluir 💜' : 'Próximo →'}
+            </button>
+          </div>
         </div>
-
-        <button
-          onClick={handleNext}
-          style={{
-            width: '100%', maxWidth: 400, padding: '17px 0',
-            borderRadius: 18, border: 'none',
-            background: 'var(--gradient-brand)', color: '#fff',
-            fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17,
-            cursor: 'pointer', boxShadow: 'var(--shadow-accent)',
-            letterSpacing: 0.2,
-          }}
-        >
-          {isLast ? 'Começar! 💜' : 'Próximo →'}
-        </button>
       </div>
-    </div>
+
+      <style>{`
+        @keyframes tour-pulse {
+          0%   { opacity: 1; box-shadow: 0 0 0 0 rgba(107,83,174,0.45); }
+          70%  { opacity: 0.6; box-shadow: 0 0 0 14px rgba(107,83,174,0); }
+          100% { opacity: 1; box-shadow: 0 0 0 0 rgba(107,83,174,0); }
+        }
+      `}</style>
+    </>
   )
 }
