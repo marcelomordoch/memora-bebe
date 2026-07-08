@@ -94,6 +94,9 @@ export async function DELETE() {
       await admin.from('memories').delete().in('baby_id', babyIds)
     }
     await admin.from('notifications').delete().eq('user_id', user.id)
+    await admin.from('payments').delete().eq('user_id', user.id)
+    // gift_cards.redeemed_by não tem CASCADE — limpar a referência antes de deletar o perfil
+    await admin.from('gift_cards').update({ redeemed_by: null }).eq('redeemed_by', user.id)
     await admin.from('babies').delete().eq('user_id', user.id)
     await admin.from('profiles').delete().eq('id', user.id)
 
