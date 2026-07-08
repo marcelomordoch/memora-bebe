@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 
 const STEPS = [
   {
@@ -30,16 +31,20 @@ const STEPS = [
   },
 ]
 
+const SKIP_PATHS = ['/criar-bebe', '/onboarding', '/register', '/login']
+
 export default function TutorialModal() {
+  const pathname = usePathname()
   const [visible, setVisible] = useState(false)
   const [step, setStep] = useState(0)
   const [animating, setAnimating] = useState(false)
 
   useEffect(() => {
-    if (localStorage.getItem('tutorial_seen') !== '1') {
+    const onSkipPath = SKIP_PATHS.some(p => pathname.startsWith(p))
+    if (!onSkipPath && localStorage.getItem('tutorial_seen') !== '1') {
       setVisible(true)
     }
-  }, [])
+  }, [pathname])
 
   function close() {
     localStorage.setItem('tutorial_seen', '1')

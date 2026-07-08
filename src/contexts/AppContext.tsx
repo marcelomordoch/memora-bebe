@@ -124,7 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }}>
       {children}
       {user && <PrivacyModal />}
-      {user && baby?.id && <TutorialModal />}
+      {user && <TutorialModal />}
     </AppContext.Provider>
   )
 }
