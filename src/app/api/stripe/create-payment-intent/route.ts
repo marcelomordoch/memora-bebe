@@ -6,8 +6,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 const PRODUCTS = {
-  premium_monthly: { amount: 2990,  currency: 'brl', name: 'Memora Bebê Premium — Mensal' },
-  premium_yearly:  { amount: 32292, currency: 'brl', name: 'Memora Bebê Premium — Anual' },
+  basico_yearly:   { amount: 850,   currency: 'brl', name: 'Memora Bebê Básico — Anual (5 GB)' },
+  familia_yearly:  { amount: 2450,  currency: 'brl', name: 'Memora Bebê Família — Anual (15 GB)' },
+  memorias_yearly: { amount: 4750,  currency: 'brl', name: 'Memora Bebê Memórias — Anual (30 GB)' },
+  premium_yearly:  { amount: 9450,  currency: 'brl', name: 'Memora Bebê Premium — Anual (60 GB)' },
+  pro_yearly:      { amount: 15700, currency: 'brl', name: 'Memora Bebê Pro — Anual (100 GB)' },
   giftcard_2990:   { amount: 2990,  currency: 'brl', name: 'Gift Card Memora Bebê R$ 29,90' },
   giftcard_4990:   { amount: 4990,  currency: 'brl', name: 'Gift Card Memora Bebê R$ 49,90' },
   giftcard_9990:   { amount: 9990,  currency: 'brl', name: 'Gift Card Memora Bebê R$ 99,90' },
@@ -22,8 +25,8 @@ export async function POST(req: NextRequest) {
     let intentName = ''
 
     if (type === 'upgrade') {
-      const productKey = billing === 'yearly' ? 'premium_yearly' : 'premium_monthly'
-      const product = PRODUCTS[productKey as keyof typeof PRODUCTS]
+      const productKey = `${plan}_yearly` as keyof typeof PRODUCTS
+      const product = PRODUCTS[productKey]
       if (!product) return NextResponse.json({ error: 'Produto inválido' }, { status: 400 })
       intentAmount = product.amount
       intentName = product.name

@@ -1,79 +1,46 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import StatusBar from '@/components/ui/StatusBar';
 import ScreenHeader from '@/components/ui/ScreenHeader';
-import Button from '@/components/ui/Button';
 import Icon from '@/components/ui/Icon';
 import AppShell from '@/components/layout/AppShell';
 import { useApp } from '@/contexts/AppContext';
 
-type Billing = 'monthly' | 'annual';
+// Mesma fórmula de /perfil/planos: custo anual + 30% lucro + Stripe
+const R2 = 0.086
+const MARGIN = 0.6601
 
-interface Feature {
-  label: string;
-  included: boolean;
+function calcAnnualPrice(gb: number) {
+  return Math.ceil(((12 * gb * R2 + 0.39) / MARGIN) / 0.5) * 0.5
 }
 
-const FREE_FEATURES: Feature[] = [
-  { label: 'Upload de fotos e vídeos', included: true },
-  { label: 'Gravação de áudio', included: true },
-  { label: 'Criar histórias de texto', included: true },
-  { label: 'Conquistas e Árvore da Vida', included: true },
-  { label: 'Compartilhamento com família', included: true },
-  { label: '1 GB de armazenamento', included: true },
-];
-
-const PREMIUM_FEATURES: Feature[] = [
-  { label: 'Visualizar memórias da família', included: true },
-  { label: 'Curtir e comentar', included: true },
-  { label: 'Criar histórias de texto', included: true },
-  { label: 'Upload de fotos e vídeos', included: true },
-  { label: 'Gravação de áudio', included: true },
-  { label: 'Armazenamento ilimitado', included: true },
-];
-
-function FeatureRow({ label, included }: Feature) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-      {included ? (
-        <span style={{
-          width: 20, height: 20, borderRadius: '50%',
-          background: 'var(--success-soft)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <Icon name="check" size={12} color="var(--success)" strokeWidth={3} />
-        </span>
-      ) : (
-        <span style={{
-          width: 20, height: 20, borderRadius: '50%',
-          background: '#F0EFF4',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <Icon name="x" size={12} color="var(--text-muted)" strokeWidth={2.5} />
-        </span>
-      )}
-      <span style={{
-        fontSize: 14,
-        color: included ? 'var(--text-body)' : 'var(--text-muted)',
-        fontFamily: 'var(--font-body)',
-      }}>
-        {label}
-      </span>
-    </div>
-  );
+function calcMonthlyEquiv(annual: number) {
+  return Math.ceil((annual / 11) / 0.5) * 0.5
 }
+
+function fmtPrice(p: number) {
+  return p.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+const PLANS = [
+  { id: 'free',     name: 'Grátis',   storage: 1,   annualPrice: 0,                    emoji: '🌱', color: '#6B53AE', bg: '#F5F3FF', highlight: false },
+  { id: 'basico',   name: 'Básico',   storage: 5,   annualPrice: calcAnnualPrice(5),   emoji: '📷', color: '#0284C7', bg: '#E0F2FE', highlight: false },
+  { id: 'familia',  name: 'Família',  storage: 15,  annualPrice: calcAnnualPrice(15),  emoji: '👨‍👩‍👧', color: '#059669', bg: '#D1FAE5', highlight: false },
+  { id: 'memorias', name: 'Memórias', storage: 30,  annualPrice: calcAnnualPrice(30),  emoji: '🎞️', color: '#D97706', bg: '#FEF3C7', highlight: false },
+  { id: 'premium',  name: 'Premium',  storage: 60,  annualPrice: calcAnnualPrice(60),  emoji: '💜', color: '#7C3AED', bg: '#EDE9FE', highlight: true },
+  { id: 'pro',      name: 'Pro',      storage: 100, annualPrice: calcAnnualPrice(100), emoji: '🚀', color: '#BE185D', bg: '#FCE7F3', highlight: false },
+]
+
+const FEATURES = [
+  'Fotos e vídeos', 'Gravação de áudio',
+  'Histórias de texto', 'Conquistas e XP',
+  'Compartilhamento família', 'Árvore da Vida',
+]
 
 export default function PlanosPage() {
   const router = useRouter();
-  const { plan, user } = useApp();
-  const [billing, setBilling] = useState<Billing>('monthly');
-
-  const premiumPrice = billing === 'monthly' ? 'R$ 29,90/mês' : 'R$ 26,91/mês'
-  const premiumSub   = billing === 'annual'  ? 'cobrado anualmente · R$ 322,92/ano' : ''
+  const { plan: currentPlan, user } = useApp();
 
   return (
     <AppShell>
@@ -82,234 +49,202 @@ export default function PlanosPage() {
         <ScreenHeader title="Planos" onBack={() => router.back()} />
 
         <div style={{ padding: '0 16px 40px' }}>
-          {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: 24, paddingTop: 8 }}>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>👑</div>
+
+          {/* Banner do trial */}
+          <div style={{
+            marginBottom: 20,
+            background: 'linear-gradient(135deg, #6B53AE, #4E4490)',
+            borderRadius: 20,
+            padding: '22px 20px',
+            textAlign: 'center',
+            boxShadow: '0 6px 24px rgba(107,83,174,0.35)',
+          }}>
+            <div style={{ fontSize: 38, marginBottom: 8, lineHeight: 1 }}>🎁</div>
             <h1 style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 24,
-              color: 'var(--text-strong)',
-              margin: '0 0 8px',
+              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22,
+              color: '#fff', margin: '0 0 8px',
             }}>
-              Escolha seu plano
+              1 mês grátis para testar
             </h1>
             <p style={{
-              fontSize: 14,
-              color: 'var(--text-muted)',
-              margin: 0,
+              fontSize: 13, color: 'rgba(255,255,255,0.82)', margin: '0 0 14px',
+              lineHeight: 1.55, fontFamily: 'var(--font-body)',
+            }}>
+              Experimente por 30 dias sem pagar nada.{'\n'}
+              Depois, assine o plano que crescer com você.
+            </p>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'rgba(255,255,255,0.15)',
+              border: '1px solid rgba(255,255,255,0.28)',
+              borderRadius: 99, padding: '5px 14px',
+              fontSize: 12, color: '#fff', fontWeight: 600,
               fontFamily: 'var(--font-body)',
             }}>
-              Desbloqueie todo o potencial do Memora Bebê
-            </p>
+              <Icon name="calendar" size={12} color="rgba(255,255,255,0.8)" />
+              Assinatura anual · 1 mês grátis incluído
+            </span>
           </div>
 
-          {/* Billing toggle */}
+          {/* Recursos incluídos em todos os planos */}
           <div style={{
-            display: 'flex',
-            background: 'var(--surface-sunken)',
-            borderRadius: 12,
-            padding: 3,
-            marginBottom: 20,
+            background: 'var(--surface-card)', borderRadius: 16,
+            padding: '14px 16px', marginBottom: 16,
+            border: '1px solid var(--border-subtle)',
           }}>
-            {(['monthly', 'annual'] as Billing[]).map((b) => (
-              <button
-                key={b}
-                onClick={() => setBilling(b)}
+            <p style={{
+              fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13,
+              color: 'var(--accent)', margin: '0 0 10px',
+            }}>
+              Todos os planos incluem
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px 12px' }}>
+              {FEATURES.map(f => (
+                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="check" size={12} color="var(--accent)" strokeWidth={3} />
+                  <span style={{ fontSize: 12, color: 'var(--text-body)', fontFamily: 'var(--font-body)' }}>{f}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cards de plano */}
+          {PLANS.map(p => {
+            const isActive = p.id === (currentPlan || 'free')
+            const isFree = p.id === 'free'
+            const monthlyEquiv = isFree ? 0 : calcMonthlyEquiv(p.annualPrice)
+
+            return (
+              <div
+                key={p.id}
                 style={{
-                  flex: 1,
-                  padding: '8px 0',
-                  borderRadius: 10,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  background: billing === b ? 'var(--surface-card)' : 'transparent',
-                  color: billing === b ? 'var(--text-strong)' : 'var(--text-muted)',
-                  boxShadow: billing === b ? 'var(--shadow-sm)' : 'none',
-                  transition: 'all 0.15s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
+                  background: p.highlight
+                    ? 'linear-gradient(135deg,#6B53AE,#4E4490)'
+                    : 'var(--surface-card)',
+                  borderRadius: 18,
+                  border: isActive
+                    ? `2px solid ${p.color}`
+                    : p.highlight ? '2px solid transparent' : '1.5px solid var(--border-subtle)',
+                  padding: '14px 16px',
+                  marginBottom: 10,
+                  boxShadow: p.highlight
+                    ? '0 4px 20px rgba(107,83,174,0.3)'
+                    : '0 1px 6px rgba(0,0,0,0.04)',
                 }}
               >
-                {b === 'monthly' ? 'Mensal' : (
-                  <>
-                    Anual
+                {/* Badge row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  {isActive ? (
                     <span style={{
-                      background: billing === 'annual' ? 'var(--accent)' : 'var(--border-strong)',
-                      color: billing === 'annual' ? '#fff' : 'var(--text-muted)',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: '2px 6px',
-                      borderRadius: 999,
-                      transition: 'all 0.15s',
-                    }}>
-                      -10%
-                    </span>
-                  </>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* FREE plan card */}
-          <div style={{
-            background: 'var(--surface-card)',
-            borderRadius: 18,
-            border: '2px solid var(--border-subtle)',
-            padding: 20,
-            marginBottom: 16,
-            position: 'relative',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <h2 style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 700,
-                    fontSize: 20,
-                    color: 'var(--text-strong)',
-                    margin: 0,
-                  }}>
-                    Free
-                  </h2>
-                  {plan === 'free' && (
-                    <span style={{
-                      background: 'var(--success-soft)',
-                      color: 'var(--success)',
-                      fontSize: 11,
-                      fontWeight: 700,
+                      fontSize: 10, fontWeight: 700,
+                      color: p.highlight ? '#fff' : p.color,
+                      background: p.highlight ? 'rgba(255,255,255,0.2)' : p.bg,
+                      padding: '3px 10px', borderRadius: 99,
+                      border: `1px solid ${p.highlight ? 'rgba(255,255,255,0.3)' : p.color + '33'}`,
                       fontFamily: 'var(--font-body)',
-                      padding: '3px 8px',
-                      borderRadius: 20,
                     }}>
                       Plano atual
                     </span>
+                  ) : p.highlight ? (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: '#fff',
+                      background: 'rgba(255,255,255,0.2)', padding: '3px 10px', borderRadius: 99,
+                      border: '1px solid rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)',
+                    }}>
+                      Mais popular
+                    </span>
+                  ) : <span />}
+
+                  {!isFree && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700,
+                      color: p.highlight ? '#FFD166' : p.color,
+                      background: p.highlight ? 'rgba(255,209,102,0.18)' : p.bg,
+                      padding: '3px 10px', borderRadius: 99,
+                      border: `1px solid ${p.highlight ? 'rgba(255,209,102,0.35)' : p.color + '33'}`,
+                      fontFamily: 'var(--font-body)',
+                    }}>
+                      1 mês grátis
+                    </span>
                   )}
                 </div>
-                <p style={{
-                  fontSize: 18,
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  color: 'var(--text-body)',
-                  margin: 0,
-                }}>
-                  R$ 0/mês
-                </p>
-              </div>
-              <span style={{
-                background: 'var(--success-soft)',
-                color: 'var(--success)',
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: 'var(--font-body)',
-                padding: '5px 12px',
-                borderRadius: 20,
-              }}>
-                Grátis
-              </span>
-            </div>
-            <div>
-              {FREE_FEATURES.map((f) => (
-                <FeatureRow key={f.label} {...f} />
-              ))}
-            </div>
-          </div>
 
-          {/* PREMIUM plan card */}
-          <div style={{
-            background: 'var(--surface-card)',
-            borderRadius: 18,
-            border: '2px solid var(--accent)',
-            overflow: 'hidden',
-            marginBottom: 24,
-            boxShadow: 'var(--shadow-accent)',
-          }}>
-            {/* Gradient header */}
-            <div style={{
-              background: 'var(--gradient-brand)',
-              padding: '18px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <div>
-                <p style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  fontSize: 20,
-                  color: '#fff',
-                  margin: '0 0 2px',
-                }}>
-                  💜 Premium
-                </p>
-                <p style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  fontSize: 17,
-                  color: 'rgba(255,255,255,0.9)',
-                  margin: 0,
-                }}>
-                  {premiumPrice}
-                </p>
-                {premiumSub && (
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', margin: '2px 0 0', fontFamily: 'var(--font-body)' }}>
-                    {premiumSub}
-                  </p>
-                )}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <span style={{
-                  background: 'rgba(255,255,255,0.22)',
-                  color: '#fff',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  fontFamily: 'var(--font-body)',
-                  padding: '4px 10px',
-                  borderRadius: 20,
-                  border: '1px solid rgba(255,255,255,0.35)',
-                }}>
-                  Mais popular
-                </span>
-                {plan === 'premium' && (
-                  <span style={{
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-body)',
-                    padding: '4px 10px',
-                    borderRadius: 20,
-                    border: '1px solid rgba(255,255,255,0.35)',
+                {/* Linha principal */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {/* Ícone */}
+                  <div style={{
+                    width: 50, height: 50, borderRadius: 14, flexShrink: 0,
+                    background: p.highlight ? 'rgba(255,255,255,0.15)' : p.bg,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    Plano atual
-                  </span>
-                )}
-              </div>
-            </div>
+                    <span style={{ fontSize: 21, lineHeight: 1 }}>{p.emoji}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: p.highlight ? 'rgba(255,255,255,0.85)' : p.color, marginTop: 2 }}>
+                      {p.storage} GB
+                    </span>
+                  </div>
 
-            <div style={{ padding: 20 }}>
-              {PREMIUM_FEATURES.map((f) => (
-                <FeatureRow key={f.label} {...f} />
-              ))}
-              <div style={{ marginTop: 18 }}>
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={() => {
-                    const uid = user?.id ?? ''
-                    router.push(`/pagamento?type=upgrade&plan=premium&billing=${billing}&uid=${uid}`)
-                  }}
-                  disabled={plan === 'premium'}
-                >
-                  {plan === 'premium' ? 'Plano ativo' : 'Assinar Premium'}
-                </Button>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15,
+                      color: p.highlight ? '#fff' : 'var(--text-strong)', margin: 0,
+                    }}>
+                      {p.name}
+                    </p>
+                    {isFree ? (
+                      <p style={{ fontSize: 20, fontWeight: 800, color: p.highlight ? '#fff' : p.color, margin: '3px 0 0', fontFamily: 'var(--font-display)' }}>
+                        Grátis
+                      </p>
+                    ) : (
+                      <>
+                        <p style={{ fontSize: 17, fontWeight: 800, color: p.highlight ? '#fff' : p.color, margin: '3px 0 0', fontFamily: 'var(--font-display)' }}>
+                          {fmtPrice(p.annualPrice)}
+                          <span style={{ fontSize: 11, fontWeight: 500, color: p.highlight ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)' }}>/ano</span>
+                        </p>
+                        <p style={{ fontSize: 11, color: p.highlight ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)', margin: '1px 0 0', fontFamily: 'var(--font-body)' }}>
+                          ≈ {fmtPrice(monthlyEquiv)}/mês
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Botão */}
+                  {!isFree && (
+                    <button
+                      onClick={() => {
+                        if (isActive) return
+                        router.push(`/pagamento?type=upgrade&plan=${p.id}&billing=yearly&uid=${user?.id ?? ''}&price=${p.annualPrice.toFixed(2)}`)
+                      }}
+                      disabled={isActive}
+                      style={{
+                        padding: '10px 16px', borderRadius: 12, border: 'none',
+                        cursor: isActive ? 'default' : 'pointer',
+                        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13,
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                        background: isActive
+                          ? (p.highlight ? 'rgba(255,255,255,0.2)' : p.bg)
+                          : p.highlight ? '#fff' : 'linear-gradient(135deg,#B79BD8,#6B53AE)',
+                        color: isActive
+                          ? (p.highlight ? 'rgba(255,255,255,0.6)' : p.color)
+                          : p.highlight ? '#6B53AE' : '#fff',
+                      }}
+                    >
+                      {isActive ? 'Ativo' : 'Assinar'}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
+            )
+          })}
+
+          {/* Rodapé informativo */}
+          <p style={{
+            textAlign: 'center', fontSize: 12, color: 'var(--text-muted)',
+            marginTop: 16, lineHeight: 1.6, fontFamily: 'var(--font-body)',
+          }}>
+            Assinaturas anuais com renovação automática.{'\n'}
+            Cancele a qualquer momento antes da renovação.
+          </p>
         </div>
       </div>
     </AppShell>

@@ -8,19 +8,25 @@ import { useApp } from '@/contexts/AppContext'
 import { getStorageUsedBytes } from '@/lib/supabase/queries'
 
 // ── Preços ────────────────────────────────────────────────────────────────────
-// R2: R$0,086/GB/mês · Stripe: 3,99% + R$0,39 · Margem: 15%
-// Preço = (custo_r2 + 0,39) ÷ (1 – 0,15 – 0,0399)
+// R2: R$0,086/GB/mês · Stripe: 3,99% + R$0,39 · Lucro: 30%
+// Preço anual = (12 meses × custo_r2 + 0,39) ÷ (1 – 0,30 – 0,0399)
+// Cobrança: 11 meses (1 mês grátis incluído)
 const R2 = 0.086
-const calcPrice = (gb: number) =>
-  Math.ceil(((gb * R2 + 0.39) / 0.8101) * 1.2 / 0.5) * 0.5
+const MARGIN = 0.6601  // 1 – 30% lucro – 3,99% Stripe
+
+const calcAnnualPrice = (gb: number) =>
+  Math.ceil(((12 * gb * R2 + 0.39) / MARGIN) / 0.5) * 0.5
+
+const calcMonthlyEquiv = (annualPrice: number) =>
+  Math.ceil((annualPrice / 11) / 0.5) * 0.5
 
 const PLANS = [
-  { id: 'free',     name: 'Grátis',   storage: 1,   price: 0,             emoji: '🌱', color: '#6B53AE', bg: '#F5F3FF' },
-  { id: 'basico',   name: 'Básico',   storage: 5,   price: calcPrice(5),  emoji: '📷', color: '#0284C7', bg: '#E0F2FE' },
-  { id: 'familia',  name: 'Família',  storage: 15,  price: calcPrice(15), emoji: '👨‍👩‍👧', color: '#059669', bg: '#D1FAE5' },
-  { id: 'memorias', name: 'Memórias', storage: 30,  price: calcPrice(30), emoji: '🎞️', color: '#D97706', bg: '#FEF3C7' },
-  { id: 'premium',  name: 'Premium',  storage: 60,  price: calcPrice(60), emoji: '💜', color: '#7C3AED', bg: '#EDE9FE', highlight: true },
-  { id: 'pro',      name: 'Pro',      storage: 100, price: calcPrice(100),emoji: '🚀', color: '#BE185D', bg: '#FCE7F3' },
+  { id: 'free',     name: 'Grátis',   storage: 1,   price: 0,                    emoji: '🌱', color: '#6B53AE', bg: '#F5F3FF' },
+  { id: 'basico',   name: 'Básico',   storage: 5,   price: calcAnnualPrice(5),   emoji: '📷', color: '#0284C7', bg: '#E0F2FE' },
+  { id: 'familia',  name: 'Família',  storage: 15,  price: calcAnnualPrice(15),  emoji: '👨‍👩‍👧', color: '#059669', bg: '#D1FAE5' },
+  { id: 'memorias', name: 'Memórias', storage: 30,  price: calcAnnualPrice(30),  emoji: '🎞️', color: '#D97706', bg: '#FEF3C7' },
+  { id: 'premium',  name: 'Premium',  storage: 60,  price: calcAnnualPrice(60),  emoji: '💜', color: '#7C3AED', bg: '#EDE9FE', highlight: true },
+  { id: 'pro',      name: 'Pro',      storage: 100, price: calcAnnualPrice(100), emoji: '🚀', color: '#BE185D', bg: '#FCE7F3' },
 ]
 
 function fmtPrice(p: number) {
@@ -240,7 +246,7 @@ export default function PlanosPage() {
     const now = new Date()
     const expires = new Date(user.plan_expires_at)
     const daysRemaining = Math.max(0, (expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    const credit = (daysRemaining / 30) * activePlan.price
+    const credit = (daysRemaining / 365) * activePlan.price
     return Math.round(credit * 100) / 100
   }
 
@@ -254,7 +260,7 @@ export default function PlanosPage() {
       setDowngradeModal({ plan: targetPlan, credit })
     } else {
       if (targetPlan.id === 'free') return
-      router.push(`/pagamento?type=upgrade&plan=${targetPlan.id}&uid=${user?.id ?? ''}&price=${targetPlan.price.toFixed(2)}`)
+      router.push(`/pagamento?type=upgrade&plan=${targetPlan.id}&billing=yearly&uid=${user?.id ?? ''}&price=${targetPlan.price.toFixed(2)}`)
     }
   }
 
@@ -378,7 +384,10 @@ export default function PlanosPage() {
 
       {/* Cards de plano */}
       <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <h3 style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: 14, color: '#2E2C4A', margin: 0 }}>Escolha seu armazenamento</h3>
+        <div>
+          <h3 style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: 14, color: '#2E2C4A', margin: 0 }}>Escolha seu armazenamento</h3>
+          <p style={{ fontSize: 11, color: '#8B89B0', margin: '2px 0 0' }}>Assinatura anual · 1 mês grátis incluído em todos os planos</p>
+        </div>
 
         {PLANS.map((p) => {
           const isActive = p.id === storagePlan
@@ -399,9 +408,9 @@ export default function PlanosPage() {
                 boxShadow: isHighlight ? '0 4px 20px rgba(107,83,174,0.3)' : '0 1px 6px rgba(0,0,0,0.05)',
               }}
             >
-              {/* Badge no topo, fora do fluxo de conteúdo */}
-              {hasBadge && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              {/* Badges */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (hasBadge || !isFree) ? 8 : 0 }}>
+                {hasBadge ? (
                   <span style={{
                     background: isActive
                       ? (isHighlight ? 'rgba(255,255,255,0.2)' : p.bg)
@@ -417,8 +426,19 @@ export default function PlanosPage() {
                   }}>
                     {isActive ? 'Plano atual' : 'Mais popular'}
                   </span>
-                </div>
-              )}
+                ) : <span />}
+                {!isFree && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700,
+                    color: isHighlight ? '#FFD166' : p.color,
+                    background: isHighlight ? 'rgba(255,209,102,0.18)' : p.bg,
+                    padding: '3px 10px', borderRadius: 99,
+                    border: `1px solid ${isHighlight ? 'rgba(255,209,102,0.35)' : p.color + '33'}`,
+                  }}>
+                    1 mês grátis
+                  </span>
+                )}
+              </div>
 
               {/* Linha principal: ícone | info | preço+botão */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -441,9 +461,14 @@ export default function PlanosPage() {
                 </div>
 
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: 13, color: isHighlight ? '#fff' : p.color, margin: '0 0 6px', whiteSpace: 'nowrap' }}>
-                    {isFree ? 'Grátis' : `${fmtPrice(p.price)}/mês`}
+                  <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 800, fontSize: 13, color: isHighlight ? '#fff' : p.color, margin: '0 0 2px', whiteSpace: 'nowrap' }}>
+                    {isFree ? 'Grátis' : `${fmtPrice(p.price)}/ano`}
                   </p>
+                  {!isFree && (
+                    <p style={{ fontSize: 10, color: isHighlight ? 'rgba(255,255,255,0.65)' : '#8B89B0', margin: '0 0 6px', whiteSpace: 'nowrap' }}>
+                      ≈ {fmtPrice(calcMonthlyEquiv(p.price))}/mês
+                    </p>
+                  )}
                   {!isFree && (
                     <button
                       onClick={() => !isActive && handlePlanClick(p)}

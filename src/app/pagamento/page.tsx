@@ -34,8 +34,8 @@ function getProductInfo(params: URLSearchParams) {
   if (type === 'upgrade') {
     const info = PLAN_INFO[plan] ?? PLAN_INFO['premium']
     const priceFormatted = price
-      ? `R$ ${parseFloat(price).toFixed(2).replace('.', ',')}/mês`
-      : 'R$ 29,90/mês'
+      ? `R$ ${parseFloat(price).toFixed(2).replace('.', ',')}/${billing === 'yearly' ? 'ano' : 'mês'}`
+      : 'R$ 8,50/ano'
     return {
       type, plan, billing, amount, uid, senderName, message,
       name: `Plano ${info.label} — ${info.storage} de armazenamento`,
