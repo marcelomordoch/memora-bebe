@@ -42,6 +42,13 @@ export default function PlanosPage() {
   const router = useRouter();
   const { plan: currentPlan, user } = useApp();
 
+  const trialEnds = user?.created_at
+    ? new Date(new Date(user.created_at).getTime() + 30 * 24 * 60 * 60 * 1000)
+    : null
+  const trialDaysLeft = trialEnds
+    ? Math.max(0, Math.ceil((trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0
+
   return (
     <AppShell>
       <div style={{ background: 'var(--surface-page)', minHeight: '100vh' }}>
@@ -233,6 +240,36 @@ export default function PlanosPage() {
                     </button>
                   )}
                 </div>
+
+                {/* Countdown do trial — só no card Grátis */}
+                {isFree && user && (
+                  <div style={{
+                    marginTop: 12, padding: '10px 12px', borderRadius: 10,
+                    background: trialDaysLeft > 0 ? '#F5F3FF' : '#FFF7ED',
+                    border: `1px solid ${trialDaysLeft > 0 ? '#DDD6FE' : '#FCD34D'}`,
+                  }}>
+                    {trialDaysLeft > 0 ? (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#6B53AE', fontFamily: 'var(--font-body)' }}>Período gratuito</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#6B53AE', fontFamily: 'var(--font-body)' }}>
+                            {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'}
+                          </span>
+                        </div>
+                        <div style={{ height: 6, background: '#DDD6FE', borderRadius: 99, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${(trialDaysLeft / 30) * 100}%`, background: '#6B53AE', borderRadius: 99 }} />
+                        </div>
+                        <p style={{ fontSize: 10, color: '#7C3AED', margin: '5px 0 0', lineHeight: 1.4, fontFamily: 'var(--font-body)' }}>
+                          Após o período gratuito, escolha um plano para continuar.
+                        </p>
+                      </>
+                    ) : (
+                      <p style={{ fontSize: 11, fontWeight: 600, color: '#92400E', margin: 0, lineHeight: 1.4, fontFamily: 'var(--font-body)' }}>
+                        Período gratuito encerrado. Assine um plano para continuar salvando memórias.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}

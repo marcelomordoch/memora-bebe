@@ -227,6 +227,13 @@ export default function PlanosPage() {
   const storagePlan = user?.storage_plan ?? 'free'
   const limitGB = user?.storage_limit_gb ?? 1
   const activePlan = PLANS.find(p => p.id === storagePlan) ?? PLANS[0]
+
+  const trialEnds = user?.created_at
+    ? new Date(new Date(user.created_at).getTime() + 30 * 24 * 60 * 60 * 1000)
+    : null
+  const trialDaysLeft = trialEnds
+    ? Math.max(0, Math.ceil((trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0
   const activeIdx = PLANS.findIndex(p => p.id === storagePlan)
 
   const usedMB = usedBytes / (1024 * 1024)
@@ -496,10 +503,38 @@ export default function PlanosPage() {
                 </div>
               </div>
 
-              {/* Barra de progresso só no plano ativo */}
+              {/* Info no plano ativo */}
               {isActive && !loadingStorage && (
-                <div style={{ marginTop: 12 }}>
+                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <StorageBar usedBytes={usedBytes} limitGB={p.storage} />
+                  {isFree && (
+                    <div style={{
+                      padding: '10px 12px', borderRadius: 10,
+                      background: trialDaysLeft > 0 ? '#F5F3FF' : '#FFF7ED',
+                      border: `1px solid ${trialDaysLeft > 0 ? '#DDD6FE' : '#FCD34D'}`,
+                    }}>
+                      {trialDaysLeft > 0 ? (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#6B53AE' }}>Período gratuito</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#6B53AE' }}>
+                              {trialDaysLeft} {trialDaysLeft === 1 ? 'dia restante' : 'dias restantes'}
+                            </span>
+                          </div>
+                          <div style={{ height: 6, background: '#DDD6FE', borderRadius: 99, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${(trialDaysLeft / 30) * 100}%`, background: '#6B53AE', borderRadius: 99, transition: 'width .6s ease' }} />
+                          </div>
+                          <p style={{ fontSize: 10, color: '#7C3AED', margin: '5px 0 0', lineHeight: 1.4 }}>
+                            Após o período gratuito, escolha um plano para continuar.
+                          </p>
+                        </>
+                      ) : (
+                        <p style={{ fontSize: 11, fontWeight: 600, color: '#92400E', margin: 0, lineHeight: 1.4 }}>
+                          Período gratuito encerrado. Assine um plano para continuar salvando memórias.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
