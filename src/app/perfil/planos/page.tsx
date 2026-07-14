@@ -12,7 +12,7 @@ import { getStorageUsedBytes } from '@/lib/supabase/queries'
 // Preço = (custo_r2 + 0,39) ÷ (1 – 0,15 – 0,0399)
 const R2 = 0.086
 const calcPrice = (gb: number) =>
-  Math.ceil(((gb * R2 + 0.39) / 0.8101) / 0.5) * 0.5
+  Math.ceil(((gb * R2 + 0.39) / 0.8101) * 1.2 / 0.5) * 0.5
 
 const PLANS = [
   { id: 'free',     name: 'Grátis',   storage: 1,   price: 0,             emoji: '🌱', color: '#6B53AE', bg: '#F5F3FF' },
