@@ -72,8 +72,8 @@ export default function PlanosPage() {
   const { plan, user } = useApp();
   const [billing, setBilling] = useState<Billing>('monthly');
 
-  const premiumPrice = billing === 'monthly' ? 'R$ 29,90/mês' : 'R$ 249,90/ano';
-  const premiumSaving = billing === 'annual' ? ' (economize 30%)' : '';
+  const premiumPrice = billing === 'monthly' ? 'R$ 29,90/mês' : 'R$ 26,91/mês'
+  const premiumSub   = billing === 'annual'  ? 'cobrado anualmente · R$ 322,92/ano' : ''
 
   return (
     <AppShell>
@@ -129,9 +129,28 @@ export default function PlanosPage() {
                   color: billing === b ? 'var(--text-strong)' : 'var(--text-muted)',
                   boxShadow: billing === b ? 'var(--shadow-sm)' : 'none',
                   transition: 'all 0.15s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 }}
               >
-                {b === 'monthly' ? 'Mensal' : 'Anual'}
+                {b === 'monthly' ? 'Mensal' : (
+                  <>
+                    Anual
+                    <span style={{
+                      background: billing === 'annual' ? 'var(--accent)' : 'var(--border-strong)',
+                      color: billing === 'annual' ? '#fff' : 'var(--text-muted)',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: 999,
+                      transition: 'all 0.15s',
+                    }}>
+                      -10%
+                    </span>
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -235,12 +254,12 @@ export default function PlanosPage() {
                   margin: 0,
                 }}>
                   {premiumPrice}
-                  {premiumSaving && (
-                    <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.85 }}>
-                      {premiumSaving}
-                    </span>
-                  )}
                 </p>
+                {premiumSub && (
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', margin: '2px 0 0', fontFamily: 'var(--font-body)' }}>
+                    {premiumSub}
+                  </p>
+                )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                 <span style={{

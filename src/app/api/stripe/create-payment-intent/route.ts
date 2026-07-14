@@ -7,7 +7,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const PRODUCTS = {
   premium_monthly: { amount: 2990,  currency: 'brl', name: 'Memora Bebê Premium — Mensal' },
-  premium_yearly:  { amount: 24990, currency: 'brl', name: 'Memora Bebê Premium — Anual' },
+  premium_yearly:  { amount: 32292, currency: 'brl', name: 'Memora Bebê Premium — Anual' },
   giftcard_2990:   { amount: 2990,  currency: 'brl', name: 'Gift Card Memora Bebê R$ 29,90' },
   giftcard_4990:   { amount: 4990,  currency: 'brl', name: 'Gift Card Memora Bebê R$ 49,90' },
   giftcard_9990:   { amount: 9990,  currency: 'brl', name: 'Gift Card Memora Bebê R$ 99,90' },
