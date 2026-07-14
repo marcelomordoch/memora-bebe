@@ -7,20 +7,9 @@ import Icon from '@/components/ui/Icon'
 import { useApp } from '@/contexts/AppContext'
 import { getStorageUsedBytes } from '@/lib/supabase/queries'
 
-// ── Preços ────────────────────────────────────────────────────────────────────
-// R2: R$0,086/GB/mês · Stripe: 3,99% + R$0,39 · Margem: 15%
-// Preço = (custo_r2 + 0,39) ÷ (1 – 0,15 – 0,0399)
-const R2 = 0.086
-const calcPrice = (gb: number) =>
-  Math.ceil(((gb * R2 + 0.39) / 0.8101) / 0.5) * 0.5
-
 const PLANS = [
-  { id: 'free',     name: 'Grátis',   storage: 1,   price: 0,             emoji: '🌱', color: '#6B53AE', bg: '#F5F3FF' },
-  { id: 'basico',   name: 'Básico',   storage: 5,   price: calcPrice(5),  emoji: '📷', color: '#0284C7', bg: '#E0F2FE' },
-  { id: 'familia',  name: 'Família',  storage: 15,  price: calcPrice(15), emoji: '👨‍👩‍👧', color: '#059669', bg: '#D1FAE5' },
-  { id: 'memorias', name: 'Memórias', storage: 30,  price: calcPrice(30), emoji: '🎞️', color: '#D97706', bg: '#FEF3C7' },
-  { id: 'premium',  name: 'Premium',  storage: 60,  price: calcPrice(60), emoji: '💜', color: '#7C3AED', bg: '#EDE9FE', highlight: true },
-  { id: 'pro',      name: 'Pro',      storage: 100, price: calcPrice(100),emoji: '🚀', color: '#BE185D', bg: '#FCE7F3' },
+  { id: 'free',    name: 'Grátis',  storage: 1,   price: 0,     emoji: '🌱', color: '#6B53AE', bg: '#F5F3FF' },
+  { id: 'premium', name: 'Premium', storage: 100, price: 29.90, emoji: '💜', color: '#7C3AED', bg: '#EDE9FE', highlight: true },
 ]
 
 function fmtPrice(p: number) {
@@ -357,7 +346,7 @@ export default function PlanosPage() {
       <div style={{ margin: '16px 20px 0', background: 'linear-gradient(135deg,#F5F3FF,#EDE9FE)', borderRadius: 16, padding: '14px 16px', border: '1px solid #DDD6FE' }}>
         <p style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: 13, color: '#4C1D95', margin: '0 0 8px' }}>Todos os planos incluem</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
-          {['Fotos e vídeos', 'Gravação de áudio', 'Histórias de texto', 'Conquistas e XP', 'Compartilhamento família', 'Árvore da Vida'].map(f => (
+          {['Fotos e vídeos', 'Gravação de áudio', 'Histórias de texto', 'Conquistas e XP', 'Árvore da Vida', 'Mensagens para o futuro'].map(f => (
             <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Icon name="check" size={12} color="#7C3AED" strokeWidth={3} />
               <span style={{ fontSize: 12, color: '#4C1D95' }}>{f}</span>
